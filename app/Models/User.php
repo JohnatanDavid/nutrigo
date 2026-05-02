@@ -1,45 +1,46 @@
 <?php
-
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class User extends Authenticatable
-{
-    use HasApiTokens, HasFactory, Notifiable;
+class User extends Authenticatable {
+    use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name','email','password','nickname','birth_date','gender',
+        'province','city','height_cm','weight_kg','bmi',
+        'daily_calorie_needs','activity_level','is_admin',
+        'onboarding_completed','onboarding_step','last_activity',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password','remember_token'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'birth_date'        => 'date',
+        'is_admin'          => 'boolean',
+        'onboarding_completed' => 'boolean',
+        'password'          => 'hashed',
     ];
+
+    // ─── Admin check ───────────────────────────────────────────
+    public function isAdmin(): bool {
+        $adminEmails = array_map('trim', explode(',', config('nutrigo.admin_emails', '')));
+        return in_array($this->email, $adminEmails) || $this->is_admin;
+    }
+
+    public function getAge(): int {
+        return $this->birth_date ? $this->birth_date->age : 0;
+    }
+
+    // ─── Relations ─────────────────────────────────────────────
+    public function allergies()      { return $this->hasMany(UserAllergy::class); }
+    public function medicalNeeds()   { return $this->hasMany(UserMedicalNeed::class); }
+    public function foodHistories()  { return $this->hasMany(FoodHistory::class); }
+    public function recommendations(){ return $this->hasMany(MenuRecommendation::class); }
+    public function reminders()      { return $this->hasMany(MealReminder::class); }
+    public function notifications()  { return $this->hasMany(Notification::class); }
+    public function articles()       { return $this->hasMany(Article::class, 'author_id'); }
 }
