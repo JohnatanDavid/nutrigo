@@ -4,10 +4,17 @@
 
 @section('content')
 <div class="max-w-2xl">
-    <form method="POST" action="{{ route('admin.foods.update', $food) }}">
+    <form method="POST" action="{{ route('admin.foods.update', $food) }}" enctype="multipart/form-data">
         @csrf @method('PUT')
         <div class="card space-y-5">
             <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="text-sm font-semibold text-gray-700 block mb-1">Foto Makanan</label>
+                    <input type="file" name="photo" accept="image/*" class="input-field">
+                    @if($food->image_url)
+                        <p class="mt-2 text-xs text-gray-500">Foto saat ini: <a href="{{ \Illuminate\Support\Facades\Storage::url($food->image_url) }}" target="_blank" class="text-ng-green underline">lihat gambar</a></p>
+                    @endif
+                </div>
                 <div class="col-span-2">
                     <label class="text-sm font-semibold text-gray-700 block mb-1">Nama Makanan *</label>
                     <input type="text" name="name" value="{{ old('name', $food->name) }}" class="input-field" required>
@@ -54,8 +61,9 @@
                     </label>
                 </div>
                 <div class="col-span-2">
-                    <label class="text-sm font-semibold text-gray-700 block mb-1">Komposisi / Bahan</label>
+                    <label class="text-sm font-semibold text-gray-700 block mb-1">Alergen / Komposisi</label>
                     <textarea name="composition" rows="3" class="input-field resize-none">{{ old('composition', $food->composition) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500">Field ini dipakai untuk filter alergi saat rekomendasi menu.</p>
                 </div>
             </div>
             <div class="flex gap-3 justify-end pt-2 border-t border-gray-100">
