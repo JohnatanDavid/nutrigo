@@ -2,21 +2,28 @@
 namespace App\Console\Commands;
 
 use App\Models\Food;
+use App\Models\MenuRecommendation;
 use Illuminate\Console\Command;
 
 class ImportFoodsCsv extends Command
 {
-    protected $signature   = 'nutrigo:import-foods {file? : Path ke file CSV}';
+    protected $signature   = 'nutrigo:import-foods {file? : Path ke file CSV} {--replace : Hapus data food lama sebelum import}';
     protected $description = 'Import data makanan dari file CSV';
 
     public function handle(): void
     {
-        $filePath = $this->argument('file') ?? database_path('data/db_food_final.csv');
+        $filePath = $this->argument('file') ?? database_path('data/db_final_food_javanese.csv');
 
         if (!file_exists($filePath)) {
             $this->error("File tidak ditemukan: {$filePath}");
-            $this->line("Contoh: php artisan nutrigo:import-foods database/data/db_food_final.csv");
+            $this->line("Contoh: php artisan nutrigo:import-foods database/data/db_final_food_javanese.csv --replace");
             return;
+        }
+
+        if ($this->option('replace')) {
+            MenuRecommendation::query()->delete();
+            Food::query()->delete();
+            $this->warn('⚠️ Data makanan lama dihapus sebelum import.');
         }
 
         $handle  = fopen($filePath, 'r');
@@ -47,12 +54,15 @@ class ImportFoodsCsv extends Command
             Food::updateOrCreate(
                 ['name' => $name],
                 [
-                    'calories'     => (float)($data['calories'] ?? 0),
-                    'proteins'     => (float)($data['proteins'] ?? 0),
-                    'fat'          => (float)($data['fat'] ?? 0),
-                    'carbohydrate' => (float)($data['carbohydrate'] ?? 0),
+                    'calories'     => $this->normalizeNumber($data['calories'] ?? 0),
+                    'proteins'     => $this->normalizeNumber($data['proteins'] ?? 0),
+                    'fat'          => $this->normalizeNumber($data['fat'] ?? 0),
+                    'carbohydrate' => $this->normalizeNumber($data['carbohydrate'] ?? 0),
                     'composition'  => $data['composition'] ?? null,
                     'origin'       => $data['origin'] ?? null,
+                    'food_category'=> $data['food_category'] ?? $this->detectFoodCategory($name, $data['composition'] ?? ''),
+                    'is_national'  => $this->normalizeBoolean($data['is_national'] ?? false),
+                    'region'       => $this->normalizeRegion($data['region'] ?? null, $data['origin'] ?? null, $data['is_national'] ?? false),
                     'meal_type'    => $mealType,
                     'is_active'    => true,
                 ]
@@ -86,5 +96,48 @@ class ImportFoodsCsv extends Command
         }
 
         return 'lunch';
+    }
+
+    private function detectFoodCategory(string $name, string $composition): string
+    {
+        $text = strtolower(trim($name . ' ' . $composition));
+
+        $categories = [
+            'fruit' => ['apel','pisang','mangga','jeruk','pepaya','semangka','melon','salak','rambutan','alpukat','nanas','sirsak','manggis','anggur'],
+            'vegetable' => ['sayur','bayam','kangkung','sawi','wortel','timun','terong','buncis','kol','daun','labu','selada'],
+            'drink' => ['jus','teh','kopi','susu','wedang','es ','minuman','air ', 'sirup'],
+            'snack' => ['kue','keripik','biskuit','permen','gorengan','martabak','pastel','risoles','roti','camilan','jajanan','pukis'],
+        ];
+
+        foreach ($categories as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($text, $keyword)) {
+                    return $category;
+                }
+            }
+        }
+
+        return 'main_meal';
+    }
+
+    private function normalizeNumber(mixed $value): float
+    {
+        return (float) str_replace(',', '.', trim((string) $value));
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'y'], true);
+    }
+
+    private function normalizeRegion(mixed $region, ?string $origin = null, mixed $isNational = false): ?string
+    {
+        $region = trim((string) $region);
+
+        if ($this->normalizeBoolean($isNational) || $region === 'Nasional') {
+            return 'Nasional';
+        }
+
+        return $region !== '' ? $region : $origin;
     }
 }

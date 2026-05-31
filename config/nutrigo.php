@@ -24,15 +24,11 @@ return [
     ],
 
     'provinces' => [
-        'Aceh','Sumatera Utara','Sumatera Barat','Riau','Kepulauan Riau',
-        'Jambi','Sumatera Selatan','Bangka Belitung','Bengkulu','Lampung',
-        'DKI Jakarta','Jawa Barat','Banten','Jawa Tengah','DI Yogyakarta',
-        'Jawa Timur','Bali','Nusa Tenggara Barat','Nusa Tenggara Timur',
-        'Kalimantan Barat','Kalimantan Tengah','Kalimantan Selatan',
-        'Kalimantan Timur','Kalimantan Utara','Sulawesi Utara',
-        'Sulawesi Tengah','Sulawesi Selatan','Sulawesi Tenggara',
-        'Gorontalo','Sulawesi Barat','Maluku','Maluku Utara',
-        'Papua','Papua Barat','Papua Selatan','Papua Tengah',
-        'Papua Pegunungan',
+        'Jawa Timur',
+        'Jawa Tengah',
+        'Jawa Barat',
+        'DKI Jakarta',
+        'DI Yogyakarta',
+        'Banten',
     ],
 ];

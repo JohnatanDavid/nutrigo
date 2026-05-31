@@ -12,7 +12,18 @@ use App\Http\Controllers\Admin;
 use Illuminate\Support\Facades\Route;
 
 // ── Landing ──────────────────────────────────────────────
-Route::get('/', fn() => view('landing'))->name('home');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('user.dashboard');
+    }
+
+    return view('landing');
+})->name('home');
+
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('user.dashboard');
+Route::post('/dashboard/health', [DashboardController::class, 'storeHealth'])->middleware('auth')->name('user.health.store');
+Route::post('/dashboard/profile/complete', [DashboardController::class, 'completeProfile'])->middleware('auth')->name('user.profile.complete');
+Route::post('/dashboard/recommendations/filter', [DashboardController::class, 'filterRecommendations'])->middleware('auth')->name('user.recommendations.filter');
 
 // ── Auth ────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -35,10 +46,13 @@ Route::middleware('auth')->prefix('onboarding')->name('onboarding.')->group(func
 
 // ── User Area ───────────────────────────────────────────
 Route::middleware(['auth','user.only','onboarding'])->prefix('dashboard')->name('user.')->group(function () {
-    Route::get('/',             [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/menu',         [MenuController::class,      'index'])->name('menu');
     Route::post('/menu/regenerate', [MenuController::class,  'regenerate'])->name('menu.regenerate');
     Route::post('/menu/log',    [MenuController::class,      'logFood'])->name('menu.log');
+    Route::post('/menu/select', [MenuController::class,      'selectMenu'])->name('menu.select');
+    Route::post('/menu/confirm', [MenuController::class,     'confirmPlannedMenu'])->name('menu.confirm');
+    Route::get('/foods/{food}', [MenuController::class, 'detail'])->name('menu.detail');
+    
     Route::get('/history',      [HistoryController::class,   'index'])->name('history');
     Route::delete('/history/{history}', [HistoryController::class, 'destroy'])->name('history.destroy');
     Route::get('/profile',      [ProfileController::class,   'index'])->name('profile');

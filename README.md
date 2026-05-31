@@ -70,8 +70,8 @@ php artisan key:generate
 php artisan migrate
 php artisan db:seed
 
-# 7. Import data makanan dari CSV
-php artisan nutrigo:import-foods
+# 7. Import data makanan dari CSV baru
+php artisan nutrigo:import-foods database/data/db_final_food_javanese.csv --replace
 
 # 8. Build assets
 npm run build

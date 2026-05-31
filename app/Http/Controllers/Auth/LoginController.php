@@ -18,12 +18,26 @@ class LoginController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'password.required' => 'Password wajib diisi.',
         ]);
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            return redirect()->intended('/dashboard');
+            $user = Auth::user();
+
+            if ($user?->isAdmin()) {
+                return redirect()->route('admin.dashboard');
+            }
+
+            if (!$user?->onboarding_completed) {
+                return redirect()->route('user.dashboard');
+            }
+
+            return redirect()->route('user.dashboard');
         }
 
         return back()->withErrors([

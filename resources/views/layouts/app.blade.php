@@ -10,114 +10,38 @@
 </head>
 <body class="bg-gray-50 min-h-screen" x-data>
 
-<div class="flex h-screen overflow-hidden">
+    <div class="min-h-screen flex flex-col bg-gray-50">
 
-    {{-- Notifikasi (live update dengan Alpine.js) --}}
-<div x-data="notifBadge()" x-init="fetchCount()" class="relative">
-    <a href="{{ route('user.notifications') }}" class="relative inline-block">
-        <span class="text-2xl">🔔</span>
-        <span x-show="count > 0"
-            x-text="count > 9 ? '9+' : count"
-            class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold leading-none">
-        </span>
-    </a>
-</div>
+        {{-- Top Navigation (mockup style) --}}
+        <header class="bg-[#fff6e8] border-b border-[#f0e5d0]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <nav class="flex items-center gap-6">
+                        <a href="{{ route('user.dashboard') }}" class="text-[#d94b2b] font-bold">Dashboard</a>
+                        <a href="{{ route('user.history') }}" class="text-[#6b6b6b]">Riwayat</a>
+                    </nav>
 
-<script>
-function notifBadge() {
-    return {
-        count: {{ auth()->user()->notifications()->where('is_read', false)->count() }},
-        async fetchCount() {
-            // Refresh setiap 60 detik
-            setInterval(async () => {
-                try {
-                    const res  = await fetch('/api/notifications/unread-count', {
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' }
-                    });
-                    const data = await res.json();
-                    this.count = data.count;
-                } catch(e) {}
-            }, 60000);
-        }
-    }
-}
-</script>
+                    <div class="flex items-center">
+                        <a href="{{ url('/') }}" class="mx-6">
+                            <img src="{{ asset('assets/Logo NutriGo 2.png') }}" alt="NutriGo" class="h-10">
+                        </a>
+                    </div>
 
-    {{-- SIDEBAR --}}
-    <aside class="w-64 bg-ng-dark-green flex-shrink-0 flex flex-col">
-        {{-- Logo --}}
-        <div class="p-6 border-b border-green-700">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                    <span class="text-white font-bold text-lg">N</span>
+                    <div class="flex items-center gap-4">
+                        <a href="{{ route('user.notifications') }}" class="relative text-xl">🔔
+                            @if(auth()->user()->notifications()->where('is_read',false)->count() > 0)
+                                <span class="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ auth()->user()->notifications()->where('is_read',false)->count() }}</span>
+                            @endif
+                        </a>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('user.profile') }}" class="flex items-center gap-2">
+                                <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center border-2 border-[#f55c1f]">
+                                    {{ strtoupper(substr(auth()->user()->nickname ?? auth()->user()->name, 0, 1)) }}
+                                </div>
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                <span class="text-white font-extrabold text-xl tracking-wide">nutri<span class="text-ng-yellow">Go</span></span>
-            </div>
-        </div>
-
-        {{-- User Info --}}
-        <div class="p-4 border-b border-green-700">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-ng-yellow flex items-center justify-center text-gray-800 font-bold text-sm">
-                    {{ strtoupper(substr(auth()->user()->nickname ?? auth()->user()->name, 0, 1)) }}
-                </div>
-                <div>
-                    <p class="text-white text-sm font-semibold">{{ auth()->user()->nickname ?? auth()->user()->name }}</p>
-                    <p class="text-green-300 text-xs">{{ auth()->user()->daily_calorie_needs ?? '—' }} kcal/hari</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Navigation --}}
-        <nav class="flex-1 py-4 overflow-y-auto">
-            @php
-            $navItems = [
-    ['route' => 'user.dashboard',      'icon' => '🏠', 'label' => 'Dashboard'],
-    ['route' => 'user.menu',           'icon' => '🍽️', 'label' => 'Menu'],
-    ['route' => 'user.history',        'icon' => '📋', 'label' => 'Riwayat'],
-    ['route' => 'user.notifications',  'icon' => '🔔', 'label' => 'Notifikasi'],
-    ['route' => 'user.profile',        'icon' => '👤', 'label' => 'Profil'],
-];
-            @endphp
-            @foreach($navItems as $item)
-                <a href="{{ route($item['route']) }}"
-                class="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150
-                        {{ request()->routeIs($item['route']) ? 'bg-orange-500 text-white font-semibold' : 'text-green-200 hover:bg-green-800 hover:text-white' }}">
-                    <span>{{ $item['icon'] }}</span>
-                    <span>{{ $item['label'] }}</span>
-                </a>
-            @endforeach
-        </nav>
-
-        {{-- Logout --}}
-        <div class="p-4 border-t border-green-700">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="flex items-center gap-3 text-green-300 hover:text-white text-sm w-full px-2 py-2 rounded-lg hover:bg-green-800 transition">
-                    <span>🚪</span><span>Keluar</span>
-                </button>
-            </form>
-        </div>
-    </aside>
-
-    {{-- MAIN CONTENT --}}
-    <div class="flex-1 flex flex-col overflow-hidden">
-        {{-- Top Bar --}}
-        <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-            <div>
-                <h1 class="text-xl font-bold text-gray-800">@yield('page-title', 'Dashboard')</h1>
-                <p class="text-sm text-gray-500">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</p>
-            </div>
-            <div class="flex items-center gap-4">
-                {{-- Notifikasi --}}
-                <a href="{{ route('user.profile') }}" class="relative">
-                    <span class="text-2xl">🔔</span>
-                    @if(auth()->user()->notifications()->where('is_read',false)->count() > 0)
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                            {{ auth()->user()->notifications()->where('is_read',false)->count() }}
-                        </span>
-                    @endif
-                </a>
             </div>
         </header>
 
@@ -142,7 +66,6 @@ function notifBadge() {
             @yield('content')
         </main>
     </div>
-</div>
 <x-flash />
 </body>
 </html>

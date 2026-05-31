@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\MenuRecommendation;
 use App\Models\FoodHistory;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class MenuRecommendationService
 {
@@ -103,7 +104,7 @@ class MenuRecommendationService
 
         // ── 3. Filter alergen ──────────────────────────────────────
         foreach ($allergens as $allergen) {
-            $query->where('composition', 'not like', "%{$allergen}%");
+            $query->whereRaw('LOWER(composition) NOT LIKE ?', ['%' . mb_strtolower($allergen) . '%']);
         }
 
         // ── 4. Preferensi berdasarkan BMI ─────────────────────────
@@ -117,6 +118,7 @@ class MenuRecommendationService
 
         // ── 5. Prioritas wilayah lokal ────────────────────────────
         $foods = $query->get();
+        $foods = $foods->filter(fn (Food $food) => !$this->foodContainsAnyAllergen($food->composition ?? '', $allergens));
 
         if ($foods->isEmpty()) {
             // Fallback: cari tanpa filter range kalori
@@ -126,9 +128,7 @@ class MenuRecommendationService
                 ->get();
 
             // Filter alergen manual
-            foreach ($allergens as $allergen) {
-                $foods = $foods->filter(fn($f) => !str_contains(strtolower($f->composition ?? ''), strtolower($allergen)));
-            }
+            $foods = $foods->filter(fn (Food $food) => !$this->foodContainsAnyAllergen($food->composition ?? '', $allergens));
         }
 
         if ($foods->isEmpty()) return null;
@@ -176,6 +176,41 @@ class MenuRecommendationService
     }
 
     /**
+     * Generate rekomendasi berdasarkan filter (wilayah / aktivitas / alergi)
+     * Mengembalikan array dengan keys: breakfast, lunch, dinner (Food|null)
+     */
+    public function generateDailyMenuWithFilters(User $user, array $filters = []): array
+    {
+        $today = Carbon::today();
+
+        $dailyCal = $user->daily_calorie_needs ?? 2000;
+        $targets   = [
+            'breakfast' => $dailyCal * 0.30,
+            'lunch'     => $dailyCal * 0.40,
+            'dinner'    => $dailyCal * 0.30,
+        ];
+
+        $allergens = $filters['allergens'] ?? $user->allergies->pluck('allergen')->toArray();
+        $provinceOverride = $filters['province'] ?? null;
+
+        // recent eaten ids
+        $recentIds = FoodHistory::where('user_id', $user->id)
+            ->where('consumed_date', '>=', Carbon::now()->subDays(3))
+            ->pluck('food_id')
+            ->toArray();
+
+        // untuk scoring, kita butuh user dengan province override
+        $scoringUser = clone $user;
+        if ($provinceOverride) $scoringUser->province = $provinceOverride;
+
+        $breakfast = $this->pickFoodByProfile($scoringUser, 'breakfast', $targets['breakfast'], $allergens, $recentIds);
+        $lunch = $this->pickFoodByProfile($scoringUser, 'lunch', $targets['lunch'], $allergens, array_merge($recentIds, [$breakfast?->id]));
+        $dinner = $this->pickFoodByProfile($scoringUser, 'dinner', $targets['dinner'], $allergens, array_merge($recentIds, [$breakfast?->id, $lunch?->id]));
+
+        return ['breakfast' => $breakfast, 'lunch' => $lunch, 'dinner' => $dinner];
+    }
+
+    /**
      * Cek apakah makanan cocok untuk user (skor kompatibilitas)
      */
     public function getFoodCompatibilityScore(Food $food, User $user): array
@@ -187,7 +222,7 @@ class MenuRecommendationService
 
         // Cek alergen
         foreach ($allergens as $a) {
-            if (str_contains(strtolower($food->composition ?? ''), strtolower($a))) {
+            if ($this->compositionMatchesAllergen($food->composition ?? '', $a)) {
                 $issues[] = "⚠️ Mengandung {$a} (alergenmu)";
                 $score   -= 50;
             }
@@ -217,5 +252,71 @@ class MenuRecommendationService
                 default      => '❌ Kurang cocok',
             },
         ];
+    }
+
+    private function compositionMatchesAllergen(string $composition, string $allergen): bool
+    {
+        $needle = $this->normalizeCompositionLabel($allergen);
+        if ($needle === null) {
+            return false;
+        }
+
+        $parts = preg_split('/[,;\|]/', $composition) ?: [];
+
+        foreach ($parts as $part) {
+            $normalizedPart = $this->normalizeCompositionLabel($part);
+
+            if ($normalizedPart !== null && $normalizedPart === $needle) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function foodContainsAnyAllergen(string $composition, array $allergens): bool
+    {
+        foreach ($allergens as $allergen) {
+            if ($this->compositionMatchesAllergen($composition, $allergen)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeCompositionLabel(string $value): ?string
+    {
+        $value = trim(preg_replace('/\s+/u', ' ', mb_strtolower($value)) ?? '');
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/[^\p{L}\p{N}\s\/\-]/u', '', $value) ?? $value;
+
+        $rules = [
+            'Daging Ayam' => ['daging ayam', 'ayam', 'chicken'],
+            'Daging Sapi' => ['daging sapi', 'sapi', 'beef'],
+            'Ikan' => ['ikan', 'fish'],
+            'Kedelai' => ['kedelai', 'soy', 'soya'],
+            'Kacang' => ['kacang', 'peanut', 'nuts'],
+            'Susu' => ['susu', 'dairy', 'milk'],
+            'Telur' => ['telur', 'egg', 'eggs'],
+            'Udang' => ['udang', 'shrimp'],
+            'Kepiting' => ['kepiting', 'crab'],
+            'Cumi' => ['cumi', 'squid'],
+            'Gluten' => ['gluten', 'gandum', 'wheat'],
+        ];
+
+        foreach ($rules as $canonical => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($value, $keyword)) {
+                    return $canonical;
+                }
+            }
+        }
+
+        return Str::title($value);
     }
 }

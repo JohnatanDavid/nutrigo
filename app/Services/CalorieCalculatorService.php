@@ -6,11 +6,17 @@ class CalorieCalculatorService {
     /**
      * Hitung BMR menggunakan Mifflin-St Jeor Equation
      */
-    public function calculateBMR(float $weight, float $height, int $age, string $gender): float {
+    public function calculateBMR(float $weight, float $height, int $age, ?string $gender = null): float {
         if ($gender === 'male') {
             return (10 * $weight) + (6.25 * $height) - (5 * $age) + 5;
         }
-        return (10 * $weight) + (6.25 * $height) - (5 * $age) - 161;
+
+        if ($gender === 'female') {
+            return (10 * $weight) + (6.25 * $height) - (5 * $age) - 161;
+        }
+
+        // Netral untuk alur publik yang belum meminta gender.
+        return (10 * $weight) + (6.25 * $height) - (5 * $age) - 78;
     }
 
     /**

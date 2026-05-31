@@ -12,7 +12,7 @@
     {{-- NAVBAR --}}
     <nav class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <span class="text-2xl font-extrabold text-gray-800">nutri<span class="text-ng-orange">Go</span></span>
+            <img src="{{ asset('assets/Logo NutriGo 2.png') }}" alt="NutriGo" class="h-10 w-auto">
             <div class="flex items-center gap-4">
                 <a href="{{ route('login') }}" class="text-gray-600 hover:text-ng-orange font-medium text-sm transition">Masuk</a>
                 <a href="{{ route('register') }}" class="btn-primary text-sm">Daftar Gratis</a>
@@ -31,7 +31,7 @@
             Bukan program diet — tapi gaya hidup sehat yang menyenangkan.
         </p>
         <div class="flex gap-4 justify-center mt-8">
-            <a href="{{ route('register') }}" class="btn-primary text-base px-8 py-3">Mulai Sekarang 🚀</a>
+            <a href="{{ route('user.dashboard') }}" class="btn-primary text-base px-8 py-3">Mulai Sekarang 🚀</a>
             <a href="#fitur" class="btn-outline text-base px-8 py-3">Pelajari Lebih Lanjut</a>
         </div>
     </section>
@@ -83,7 +83,7 @@
     <section class="bg-ng-orange py-16 text-center">
         <h2 class="text-3xl font-bold text-white mb-4">Siap Hidup Lebih Berwarna?</h2>
         <p class="text-orange-100 mb-8">Ribuan Gen Z sudah mulai perjalanannya. Giliran kamu!</p>
-        <a href="{{ route('register') }}" class="bg-white text-ng-orange font-bold px-10 py-4 rounded-full hover:bg-orange-50 transition text-lg inline-block">
+        <a href="{{ route('user.dashboard') }}" class="bg-white text-ng-orange font-bold px-10 py-4 rounded-full hover:bg-orange-50 transition text-lg inline-block">
             Daftar Gratis Sekarang →
         </a>
     </section>
