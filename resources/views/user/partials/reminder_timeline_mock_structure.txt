@@ -1,0 +1,22 @@
+Mock timeline layout (Breakfast -> Lunch -> Dinner)
+
+Reminder Timeline Container (rounded bg cream/orange section)
+- Timeline Step Row 1: Breakfast
+  - State badge/icon:
+    - Completed: grey circle + check
+    - Current: orange/green circle + highlight
+    - Upcoming: light/transparent circle
+  - Connector line (vertical) between steps
+  - Card content:
+    - Meal title (Makan Pagi)
+    - Reminder time (HH:mm)
+    - Selected menu block (name, calories, protein, carbs)
+    - Status row: Completed | Current Meal | Upcoming
+  - Actions (only for Current):
+    - Konfirmasi Log Menu button
+    - Ganti Menu link
+
+- Timeline Step Row 2: Lunch (same pattern)
+
+- Timeline Step Row 3: Dinner (same pattern)
+
