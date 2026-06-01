@@ -158,93 +158,29 @@
         </div>
     @endif
 
-    <section class="rounded-[28px] bg-gradient-to-br from-[#1d5b2f] via-[#195528] to-[#0e3d1f] p-10 sm:p-12 lg:p-16 text-white shadow-[0_20px_60px_rgba(20,58,31,0.16)] min-h-[320px]">
+   <section class="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#18542D] via-[#1F6E3A] to-[#2A7A43] p-8 lg:p-10 text-white shadow-[0_20px_60px_rgba(20,58,31,0.16)]">
         <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div class="max-w-2xl">
                 <span class="inline-flex rounded-full bg-[#f55c1f] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/95">Nutrition Insight</span>
-                <h2 class="mt-4 text-4xl font-black leading-tight text-[#fff8ea] sm:text-5xl">Menu hari ini sudah disesuaikan dengan kebutuhan kalorimu.</h2>
+                <h2 class="mt-4 text-3xl font-black leading-tight text-[#fff8ea] sm:text-3.5xl">Menu hari ini sudah disesuaikan dengan kebutuhan kalorimu.</h2>
                 <p class="mt-3 max-w-xl text-sm leading-6 text-white/80 sm:text-base">Selamat datang, {{ $user->nickname ?? $user->name }}. Data kesehatanmu sudah tersimpan, jadi rekomendasi menu dan pengingat makan bisa menyesuaikan kebutuhan harianmu.</p>
                 <div class="mt-8 flex flex-wrap gap-3 items-center">
-                    <button id="loadRecommendationsBtn" disabled class="inline-flex items-center gap-2 rounded-full bg-[#ffc926] px-6 py-4 text-base font-extrabold text-[#17311f] transition hover:bg-[#ffd953]">Lihat rekomendasi lengkap <span class="ml-2">→</span></button>
-                    <a href="{{ route('user.profile') }}" class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15">Atur data kesehatan</a>
-                </div>
-            </div>
-
-            <div class="hidden w-80 rounded-2xl bg-white/10 p-4 text-[#17311f] lg:block">
-                <h4 class="font-bold text-white/95">Pengaturan Filter Cepat</h4>
-                <div class="mt-4 space-y-3 text-sm text-white/90">
-                    <div class="rounded-lg bg-white/10 px-4 py-3">
-                        <label class="block text-xs font-bold text-white/80">WILAYAH</label>
-                        <select id="quickProvince" class="mt-2 w-full rounded-md border-0 bg-white/10 px-3 py-2 text-sm text-white">
-                            <option value="">Pilih provinsi</option>
-                            @foreach(($provinceOptions ?? []) as $province)
-                                <option value="{{ $province }}">{{ $province }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="rounded-lg bg-white/10 px-4 py-3">
-                        <label class="block text-xs font-bold text-white/80">AKTIVITAS</label>
-                        <select id="quickActivity" class="mt-2 w-full rounded-md border-0 bg-white/10 px-3 py-2 text-sm text-white">
-                            <option value="">Pilih aktivitas</option>
-                            @foreach($activityOptions as $a)
-                                <option value="{{ $a['value'] }}">{{ $a['label'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="rounded-lg bg-white/10 px-4 py-3">
-                        <label class="block text-xs font-bold text-white/80">ALERGI</label>
-                        <select id="quickAllergen" class="mt-2 w-full rounded-md border-0 bg-white/10 px-3 py-2 text-sm text-white">
-                            <option value="">Tidak ada</option>
-                            @foreach(($allergyOptions ?? []) as $allergy)
-                                <option value="{{ $allergy }}">{{ $allergy }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="w-full xl:w-auto mt-4 xl:mt-0">
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div class="col-span-1 rounded-2xl bg-[#ff8c45] p-4 text-white">
-                        <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/90"><span>BMI Kamu</span><span>i</span></div>
-                        <p class="mt-4 text-3xl font-black">{{ $user->bmi ? number_format($user->bmi, 1) : '—' }}</p>
-                        <p class="mt-1 text-sm font-semibold text-white/90">{{ $bmiCategory ?? ($user->bmi ? ( $user->bmi < 18.5 ? 'Kurus' : ($user->bmi < 25 ? 'Normal' : ($user->bmi < 30 ? 'Overweight' : 'Obesitas'))) : 'Belum dihitung') }}</p>
-                    </div>
-                    <div class="col-span-1 rounded-2xl bg-[#ff8c45] p-4 text-white">
-                        <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/90"><span>Total Kalori</span><span>◌</span></div>
-                        <p class="mt-4 text-3xl font-black">{{ number_format($user->daily_calorie_needs ?? 0) }}</p>
-                        <p class="mt-1 text-sm font-semibold text-white/90">/ 2.200 kcal</p>
-                    </div>
-                    <div class="col-span-1 rounded-2xl bg-[#ff8c45] p-4 text-white">
-                        <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/90"><span>Aktivitas</span><span>⌄</span></div>
-                        <p class="mt-4 text-2xl font-black">{{ ucfirst($user->activity_level ?? 'moderate') }}</p>
-                        <p class="mt-1 text-sm font-semibold text-white/90">{{ ucfirst($user->activity_level ?? 'moderate') }}</p>
-                    </div>
-                    <div class="col-span-1 rounded-2xl bg-[#ff8c45] p-4 text-white">
-                        <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/90"><span>Alergi</span><span>⌃</span></div>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            @forelse($allergies as $allergy)
-                                <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{{ $allergy }}</span>
-                            @empty
-                                <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Belum ada</span>
-                            @endforelse
-                        </div>
-                    </div>
+                <button
+                    type="button"
+                    id="loadRecommendationsBtn"
+                    onclick="document.getElementById('recommendation-list').scrollIntoView({ behavior: 'smooth' })"
+                    class="inline-flex items-center gap-2 rounded-full bg-[#ffc926] px-6 py-4 text-base font-extrabold text-[#17311f] transition hover:bg-[#ffd953]">
+                    Lihat rekomendasi lengkap
+                </button>
                 </div>
             </div>
         </div>
-        
-        <div class="mt-6">
-            <div id="recommendation-list">
-                @include('user.partials.recommendation_cards', ['menu' => ['breakfast' => $recommendation->breakfast, 'lunch' => $recommendation->lunch, 'dinner' => $recommendation->dinner]])
-            </div>
-        </div>
-        
         </div>
     </section>
 
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div class="rounded-2xl bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
+    </section>
+        <div class="mt-5 grid grid-cols-2 gap-5 lg:grid-cols-4">
+        <div class="rounded-2xl bg-[#F67A2A] p-5 text-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75"><span>BMI Kamu</span><span>i</span></div>
             <p class="mt-6 text-4xl font-black">{{ $user->bmi ? number_format($user->bmi, 1) : '—' }}</p>
             @php
@@ -259,17 +195,17 @@
             @endphp
             <p class="mt-2 text-sm font-semibold text-white/80">{{ $bmiCategory }}</p>
         </div>
-        <div class="rounded-2xl bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
+        <div class="rounded-2xl bg-[#F67A2A] p-5 text-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75"><span>Total Kalori</span><span>◌</span></div>
             <p class="mt-6 text-4xl font-black">{{ number_format($user->daily_calorie_needs ?? 0) }}</p>
-            <p class="mt-2 text-sm font-semibold text-white/80">/ 2.200 kcal</p>
+            <p class="mt-2 text-sm font-semibold text-white/80">Target Harian</p>
         </div>
-        <div class="rounded-2xl bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
+        <div class="rounded-2xl bg-[#F67A2A] p-5 text-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75"><span>Aktivitas</span><span>⌄</span></div>
             <p class="mt-6 text-2xl font-black">{{ ucfirst($user->activity_level ?? 'moderate') }}</p>
             <p class="mt-2 text-sm font-semibold text-white/80">{{ ucfirst($user->activity_level ?? 'moderate') }}</p>
         </div>
-        <div class="rounded-2xl bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
+        <div class="rounded-2xl bg-[#F67A2A] p-5 text-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75"><span>Alergi</span><span>⌃</span></div>
             <div class="mt-5 flex flex-wrap gap-2">
                 @forelse($allergies as $allergy)
@@ -281,13 +217,46 @@
         </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
+    <section id="recommendation-list" class="mt-6 rounded-[32px] bg-[#F3E8CC] p-8 shadow-sm border border-[#ece1c1]">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <span class="text-xs font-bold uppercase tracking-widest text-[#18542D]/60">
+                PERSONALISASI MENU
+            </span>
+
+            <h2 class="mt-2 text-3xl font-black text-[#17311f]">
+                Rekomendasi Menu Hari Ini
+            </h2>
+
+            <p class="mt-2 text-[#4d5a4f]">
+                Disesuaikan dengan kebutuhan kalori dan wilayahmu.
+            </p>
+        </div>
+
+            <button
+                id="refreshRecommendationsBtn"
+                class="rounded-full bg-gradient-to-r from-[#18542D] to-[#2B7A43] px-5 py-3 text-sm font-bold text-white hover:from-[#2B7A43] hover:to-[#18542D] transition">
+                Ganti Rekomendasi
+            </button>
+        </div>
+
+        @include('user.partials.recommendation_cards', [
+            'menu' => [
+                'breakfast' => $recommendation->breakfast,
+                'lunch' => $recommendation->lunch,
+                'dinner' => $recommendation->dinner
+            ]
+        ])
+
+    </section>
+
+    <div class="mt-6">
         <div class="space-y-5">
             {{-- Detailed meal cards moved into #recommendation-list to avoid duplication --}}
 
-            <section class="rounded-[24px] bg-[#fff4cb] p-6 shadow-[0_12px_26px_rgba(161,114,0,0.16)]">
+           <section class="mt-2 rounded-[28px] bg-[#F3E8CC] border border-[#E8DBB8] p-6 shadow-[0_12px_26px_rgba(161,114,0,0.16)]">
                 <h3 class="text-xl font-black text-[#17311f]">Pengingat Makan</h3>
-                <div class="mt-4 rounded-2xl bg-[#ffc926] p-4">
+                <div class="mt-6 rounded-[24px] bg-[#ffc926] p-6 shadow-lg">
                     <div class="space-y-4">
                         @foreach($reminders as $r)
                             @php
@@ -297,11 +266,19 @@
                                 if ($r->meal_type === 'dinner') $selected = $recommendation->dinner ?? null;
                             @endphp
                             <div class="flex items-center gap-4">
-                                <div class="w-8 flex flex-col items-center">
-                                    <div class="h-4 w-4 rounded-full {{ $r->is_active ? 'bg-white/90' : 'bg-white/30' }} border-2 border-white"></div>
-                                    <div class="h-full w-px bg-white/40 mt-1"></div>
+                                @if($loop->iteration == 2) bg-[#F96015]
+                                    @else bg-white/20
+                                @endif
+                                <div class="relative flex flex-col items-center w-8">
+                                <div class="w-5 h-5 rounded-full border-4 border-white
+                                    {{ $loop->first ? 'bg-[#d52518]' : 'bg-[#9ABC05]' }}">
                                 </div>
-                                <div class="flex-1">
+
+                                @unless($loop->last)
+                                    <div class="w-1 flex-1 bg-white/70"></div>
+                                @endunless
+                            </div>
+                                <div class="flex-1 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 px-5 py-4">
                                     <div class="flex items-center justify-between">
                                         <div>
                                             <p class="text-sm font-black text-white">{{ ucfirst($r->meal_type === 'breakfast' ? 'Makan Pagi' : ($r->meal_type === 'lunch' ? 'Makan Siang' : 'Makan Malam')) }}</p>
@@ -319,7 +296,7 @@
                                         </div>
                                         <div class="flex items-center gap-2">
                                             @if($selected)
-                                                <button class="confirm-planned-btn rounded-full bg-white px-3 py-2 text-sm font-bold text-[#1d5b2f]" data-meal="{{ $r->meal_type }}">Konfirmasi Log Menu</button>
+                                                <button class="confirm-planned-btn rounded-full bg-[#18542D] px-4 py-2 text-xs font-bold text-white hover:bg-[#2B7A43] transition"" data-meal="{{ $r->meal_type }}">Konfirmasi Log Menu</button>
                                                 <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="ganti-menu rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white">Ganti Menu</a>
                                             @else
                                                 <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#1d5b2f]">Pilih Menu</a>
@@ -333,31 +310,6 @@
                 </div>
             </section>
         </div>
-
-        <aside class="space-y-4">
-            <div class="flex items-end justify-between">
-                <div>
-                    <h3 class="text-xl font-black text-gray-900">Artikel Kesehatan</h3>
-                    <p class="text-sm text-gray-500">Update informasi nutrisi dan tips gaya hidup sehat.</p>
-                </div>
-                <a href="#" class="text-sm font-bold text-[#245432]">Lihat Semua →</a>
-            </div>
-            <div class="space-y-4">
-                @forelse($articles as $article)
-                    <article class="overflow-hidden rounded-[20px] bg-white shadow-[0_10px_24px_rgba(46,30,12,0.08)] ring-1 ring-black/5">
-                        <img src="{{ $article->image ? asset($article->image) : asset('assets/salad-sketsa 1.png') }}" alt="{{ $article->title }}" class="h-44 w-full object-cover">
-                        <div class="p-4">
-                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-[#f55c1f]">{{ $article->category }}</p>
-                            <h4 class="mt-3 text-lg font-black leading-snug text-[#17311f]">{{ $article->title }}</h4>
-                            <p class="mt-3 text-sm leading-6 text-[#6e6658]">{{ $article->excerpt }}</p>
-                            <a href="#" class="mt-4 inline-flex text-sm font-semibold text-[#245432]">Baca Selengkapnya</a>
-                        </div>
-                    </article>
-                @empty
-                    <p class="text-sm text-gray-500">Belum ada artikel</p>
-                @endforelse
-            </div>
-        </aside>
     </div>
 </div>
 

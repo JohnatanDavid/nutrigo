@@ -12,38 +12,130 @@
 
     <div class="min-h-screen flex flex-col bg-gray-50">
 
-        {{-- Top Navigation (mockup style) --}}
-        <header class="bg-[#fff6e8] border-b border-[#f0e5d0]">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <nav class="flex items-center gap-6">
-                        <a href="{{ route('user.dashboard') }}" class="text-[#d94b2b] font-bold">Dashboard</a>
-                        <a href="{{ route('user.history') }}" class="text-[#6b6b6b]">Riwayat</a>
-                    </nav>
+    {{-- Top Navigation --}}
+    <header class="sticky top-0 z-50 bg-[#fff6e8]/90 backdrop-blur-md border-b border-[#f0e5d0] shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
 
-                    <div class="flex items-center">
-                        <a href="{{ url('/') }}" class="mx-6">
-                            <img src="{{ asset('assets/Logo NutriGo 2.png') }}" alt="NutriGo" class="h-10">
-                        </a>
-                    </div>
+            {{-- Left Navigation --}}
+            <nav class="flex items-center gap-8">
 
-                    <div class="flex items-center gap-4">
-                        <a href="{{ route('user.notifications') }}" class="relative text-xl">🔔
-                            @if(auth()->user()->notifications()->where('is_read',false)->count() > 0)
-                                <span class="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ auth()->user()->notifications()->where('is_read',false)->count() }}</span>
-                            @endif
-                        </a>
-                        <div class="flex items-center gap-3">
-                            <a href="{{ route('user.profile') }}" class="flex items-center gap-2">
-                                <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center border-2 border-[#f55c1f]">
-                                    {{ strtoupper(substr(auth()->user()->nickname ?? auth()->user()->name, 0, 1)) }}
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <a href="{{ route('user.dashboard') }}"
+                class="relative font-medium transition-all duration-200
+                {{ request()->routeIs('user.dashboard')
+                        ? 'text-[#d94b2b]'
+                        : 'text-[#6b6b6b] hover:text-[#d94b2b]' }}">
+
+                    Dashboard
+
+                    @if(request()->routeIs('user.dashboard'))
+                        <span class="absolute -bottom-2 left-0 w-full h-0.5 bg-[#d94b2b] rounded-full"></span>
+                    @endif
+                </a>
+
+                <a href="{{ route('user.history') }}"
+                class="relative font-medium transition-all duration-200
+                {{ request()->routeIs('user.history')
+                        ? 'text-[#d94b2b]'
+                        : 'text-[#6b6b6b] hover:text-[#d94b2b]' }}">
+
+                    Riwayat
+
+                    @if(request()->routeIs('user.history'))
+                        <span class="absolute -bottom-2 left-0 w-full h-0.5 bg-[#d94b2b] rounded-full"></span>
+                    @endif
+                </a>
+
+            </nav>
+
+            {{-- Center Logo --}}
+            <div class="flex items-center">
+                <a href="{{ route('user.dashboard') }}" class="mx-6">
+                    <img
+                        src="{{ asset('assets/Logo NutriGo 2.png') }}"
+                        alt="NutriGo"
+                        class="h-10 hover:scale-105 transition-transform duration-200">
+                </a>
             </div>
-        </header>
+
+            {{-- Profile Dropdown --}}
+            <div x-data="{ open: false }" class="relative">
+
+                <button
+                    @click="open = !open"
+                    class="flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-white/60 transition">
+
+                    <div class="w-10 h-10 rounded-full bg-[#f55c1f] text-white flex items-center justify-center font-semibold shadow-sm">
+                        {{ strtoupper(substr(auth()->user()->nickname ?? auth()->user()->name, 0, 1)) }}
+                    </div>
+
+                    <div class="hidden sm:flex flex-col items-start leading-tight">
+                        <span class="text-sm text-gray-500">
+                            Halo,
+                        </span>
+
+                        <span class="font-semibold text-[#17311F]">
+                            {{ auth()->user()->nickname ?? auth()->user()->name }}
+                        </span>
+                    </div>
+
+                    <svg
+                        class="w-4 h-4 text-gray-500 transition-transform duration-200"
+                        :class="{ 'rotate-180': open }"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+
+                </button>
+
+                <div
+                    x-show="open"
+                    @click.away="open = false"
+                    x-transition
+                    class="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-[#f0e5d0] overflow-hidden z-50">
+
+                    <div class="px-4 py-3 bg-[#fff6e8] border-b border-[#f0e5d0]">
+                        <p class="font-semibold text-[#17311F]">
+                            {{ auth()->user()->nickname ?? auth()->user()->name }}
+                        </p>
+
+                        <p class="text-xs text-gray-500">
+                            {{ auth()->user()->email }}
+                        </p>
+                    </div>
+
+                    <a href="{{ route('user.profile') }}"
+                    class="flex items-center gap-3 px-4 py-3 hover:bg-[#fff6e8] transition">
+
+                        <span>Profil Saya</span>
+                    </a>
+
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+
+                        <button
+                            type="submit"
+                            class="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 transition">
+
+                            <span>Logout</span>
+                        </button>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    </header>
 
         {{-- Flash Messages --}}
         <div class="px-6 pt-4">
