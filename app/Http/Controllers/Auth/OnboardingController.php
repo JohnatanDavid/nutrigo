@@ -11,6 +11,7 @@ use App\Services\CalorieCalculatorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class OnboardingController extends Controller {
 
@@ -103,55 +104,64 @@ $user = Auth::user();
     // Step 2: Info aplikasi + Wilayah
     public function saveStep2(Request $request) {
         // Combined preferences: allergens + medical needs
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'has_allergy' => 'required|in:yes,no',
             'allergens' => 'nullable|array',
             'allergens.*' => 'string|max:100',
             'custom_allergy' => 'nullable|string|max:100',
             'has_medical_need' => 'required|in:yes,no',
-            // make detail fields nullable so empty strings won't fail type checks when user chose 'no'
             'food_item' => 'nullable|required_if:has_medical_need,yes|string|max:255',
             'quantity' => 'nullable|required_if:has_medical_need,yes|integer|min:1',
             'unit' => 'nullable|required_if:has_medical_need,yes|string|max:50',
-            'duration_type' => 'nullable|required_if:has_medical_need,yes|in:daily,weekly,yearly,forever',
+            'duration_type' => 'nullable|required_if:has_medical_need,yes|in:daily,weekly,monthly,yearly,forever',
         ]);
+
+        $validator->after(function ($v) use ($request) {
+            if ($request->input('has_allergy') === 'yes') {
+                $allergenList = collect($request->input('allergens', []))->filter();
+                if ($allergenList->isEmpty() && blank($request->input('custom_allergy'))) {
+                    $v->errors()->add('allergens', 'Pilih minimal satu alergen atau isi Alergi Lain.');
+                }
+            }
+        });
+
+        $validator->validate();
 
         /** @var User $user */
         $user = Auth::user();
 
-        // Allergies
+        // Allergies: save only when user chooses yes.
         $user->allergies()->delete();
+        if ($request->input('has_allergy') === 'yes') {
+            $allergens = collect($request->input('allergens', []))
+                ->filter()
+                ->map(fn ($allergen) => $this->normalizeCompositionLabel($allergen))
+                ->filter()
+                ->unique()
+                ->values();
 
-        $allergens = collect($request->input('allergens', []))
-            ->filter()
-            ->map(fn ($allergen) => $this->normalizeCompositionLabel($allergen))
-            ->filter()
-            ->unique()
-            ->values();
+            foreach ($allergens as $allergen) {
+                UserAllergy::create(['user_id' => $user->id, 'allergen' => $allergen]);
+            }
 
-        foreach ($allergens as $allergen) {
-            UserAllergy::create(['user_id' => $user->id, 'allergen' => $allergen]);
+            if ($request->filled('custom_allergy')) {
+                UserAllergy::create(['user_id' => $user->id, 'allergen' => $this->normalizeCompositionLabel($request->custom_allergy)]);
+            }
         }
 
-        if ($request->filled('custom_allergy')) {
-            UserAllergy::create(['user_id' => $user->id, 'allergen' => $this->normalizeCompositionLabel($request->custom_allergy)]);
-        }
-
-        // Medical need
-        $user->medicalNeeds()->update(['is_active' => false]);
+        // Medical need: save only when user chooses yes.
+        $user->medicalNeeds()->delete();
         if ($request->has_medical_need === 'yes') {
-            UserMedicalNeed::updateOrCreate(
-                ['user_id' => $user->id, 'is_active' => true],
-                [
-                    'food_item' => $request->food_item,
-                    'quantity' => $request->quantity,
-                    'unit' => $request->unit,
-                    'duration_type' => $request->duration_type,
-                    'start_date' => now()->toDateString(),
-                    'end_date' => null,
-                    'is_active' => true,
-                ]
-            );
+            UserMedicalNeed::create([
+                'user_id' => $user->id,
+                'food_item' => $request->food_item,
+                'quantity' => $request->quantity,
+                'unit' => $request->unit,
+                'duration_type' => $request->duration_type,
+                'start_date' => now()->toDateString(),
+                'end_date' => null,
+                'is_active' => true,
+            ]);
         }
 
         // Mark progress
@@ -173,22 +183,44 @@ $user = Auth::user();
     // Step 3: Alergi
     public function saveStep3(Request $request) {
         /** @var User $user */
-$user = Auth::user();
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'has_allergy' => 'required|in:yes,no',
+            'allergens' => 'nullable|array',
+            'allergens.*' => 'string|max:100',
+            'custom_allergy' => 'nullable|string|max:100',
+        ]);
+
+        $validator->after(function ($v) use ($request) {
+            if ($request->input('has_allergy') === 'yes') {
+                $allergenList = collect($request->input('allergens', []))->filter();
+                if ($allergenList->isEmpty() && blank($request->input('custom_allergy'))) {
+                    $v->errors()->add('allergens', 'Pilih minimal satu alergen atau isi Alergi Lain.');
+                }
+            }
+        });
+
+        $validator->validate();
+
+        // Replace existing allergies with submitted values, or clear all when user has none.
         $user->allergies()->delete();
 
-        $allergens = collect($request->input('allergens', []))
-            ->filter()
-            ->map(fn ($allergen) => $this->normalizeCompositionLabel($allergen))
-            ->filter()
-            ->unique()
-            ->values();
+        if ($request->input('has_allergy') === 'yes') {
+            $allergens = collect($request->input('allergens', []))
+                ->filter()
+                ->map(fn ($allergen) => $this->normalizeCompositionLabel($allergen))
+                ->filter()
+                ->unique()
+                ->values();
 
-        foreach ($allergens as $allergen) {
-            UserAllergy::create(['user_id' => $user->id, 'allergen' => $allergen]);
-        }
+            foreach ($allergens as $allergen) {
+                UserAllergy::create(['user_id' => $user->id, 'allergen' => $allergen]);
+            }
 
-        if ($request->custom_allergy) {
-            UserAllergy::create(['user_id' => $user->id, 'allergen' => $this->normalizeCompositionLabel($request->custom_allergy)]);
+            if ($request->filled('custom_allergy')) {
+                UserAllergy::create(['user_id' => $user->id, 'allergen' => $this->normalizeCompositionLabel($request->custom_allergy)]);
+            }
         }
 
         $user->update(['onboarding_step' => 4]);
@@ -198,28 +230,52 @@ $user = Auth::user();
     // Step 4: Kebutuhan medis khusus
     public function saveStep4(Request $request) {
         /** @var User $user */
-$user = Auth::user();
+        $user = Auth::user();
         $hasGuestHealthData = filled($user->height_cm)
             || filled($user->weight_kg)
             || filled($user->activity_level)
             || filled($user->bmi)
             || filled($user->daily_calorie_needs);
 
+        $validator = Validator::make($request->all(), [
+            'has_medical_need' => 'required|in:yes,no',
+            'food_item' => 'nullable|string|max:255',
+            'quantity' => 'nullable|integer|min:1',
+            'unit' => 'nullable|string|max:50',
+            'duration_type' => 'nullable|in:daily,weekly,monthly,yearly,forever',
+        ]);
 
-        if ($request->has_medical_need === 'yes') {
-            $request->validate([
-                'food_item'     => 'nullable|required|string|max:255',
-                'quantity'      => 'nullable|required|integer|min:1',
-                'unit'          => 'nullable|required|string|max:50',
-                'duration_type' => 'nullable|required|in:daily,weekly,yearly,forever',
-            ]);
+        $validator->after(function ($v) use ($request) {
+            if ($request->input('has_medical_need') === 'yes') {
+                if (blank($request->input('food_item'))) {
+                    $v->errors()->add('food_item', 'Bahan Makanan wajib diisi.');
+                }
+                if (blank($request->input('quantity'))) {
+                    $v->errors()->add('quantity', 'Kuantitas wajib diisi.');
+                }
+                if (blank($request->input('unit'))) {
+                    $v->errors()->add('unit', 'Satuan wajib dipilih.');
+                }
+                if (blank($request->input('duration_type'))) {
+                    $v->errors()->add('duration_type', 'Frekuensi wajib dipilih.');
+                }
+            }
+        });
 
+        $validator->validate();
+
+        // Replace existing medical needs with the submitted one, or clear them if user has none.
+        $user->medicalNeeds()->delete();
+
+        if ($request->input('has_medical_need') === 'yes') {
             UserMedicalNeed::create([
                 'user_id'       => $user->id,
                 'food_item'     => $request->food_item,
                 'quantity'      => $request->quantity,
                 'unit'          => $request->unit,
                 'duration_type' => $request->duration_type,
+                'start_date'    => now()->toDateString(),
+                'end_date'      => null,
                 'is_active'     => true,
             ]);
         }
@@ -253,12 +309,13 @@ $user = Auth::user();
             'Ikan' => ['ikan', 'fish'],
             'Kedelai' => ['kedelai', 'soy', 'soya'],
             'Kacang' => ['kacang', 'peanut', 'nuts'],
-            'Susu' => ['susu', 'dairy', 'milk'],
+            'Seafood' => ['seafood', 'sea food', 'mixed seafood'],
+            'Santan' => ['santan', 'coconut milk', 'kelapa'],
             'Telur' => ['telur', 'egg', 'eggs'],
             'Udang' => ['udang', 'shrimp'],
             'Kepiting' => ['kepiting', 'crab'],
             'Cumi' => ['cumi', 'squid'],
-            'Gluten' => ['gluten', 'gandum', 'wheat'],
+            'Gandum' => ['gandum', 'gluten', 'wheat', 'terigu'],
         ];
 
         foreach ($rules as $canonical => $keywords) {

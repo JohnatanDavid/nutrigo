@@ -16,30 +16,30 @@
         <aside class="flex flex-col justify-between gap-10 bg-gradient-to-br from-[#1d5b2f] via-[#195528] to-[#0e3d1f] p-8 text-white sm:p-10 lg:p-12">
             <div>
                 <img src="{{ asset('assets/Logo NutriGo 2.png') }}" alt="NutriGo" class="h-14 w-auto brightness-0 invert">
-                <h1 class="mt-8 max-w-md text-3xl font-black leading-tight text-[#fff8ea] sm:text-4xl">
+                <h1 class="mt-8 max-w-md text-3xl font-extrabold leading-tight text-[#fff8ea] sm:text-4xl">
                     Lengkapi profil untuk membuka dashboard penuh
                 </h1>
                 <p class="mt-4 max-w-md text-sm leading-6 text-white/82 sm:text-base">
-                    Data BMI kamu sudah tersimpan. Selesaikan nama panggilan, wilayah, alergi, dan kebutuhan khusus supaya rekomendasi dan dashboard bisa menyesuaikan profilmu.
+                    Data BMI sudah disimpan, lengkapi profil untuk melihat hasil rekomendasi sesuai preferensimu.
                 </p>
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-sm text-white/90">
                 <div class="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-white/60">Langkah 1</p>
-                    <p class="mt-2 font-semibold">Nama panggilan</p>
+                    <p class="mt-2 font-semibold">Profil Pengguna</p>
                 </div>
                 <div class="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-white/60">Langkah 2</p>
-                    <p class="mt-2 font-semibold">Region & daerah</p>
+                    <p class="mt-2 font-semibold">Wilayah Pengguna</p>
                 </div>
                 <div class="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-white/60">Langkah 3</p>
-                    <p class="mt-2 font-semibold">Alergi makanan</p>
+                    <p class="mt-2 font-semibold">Alergi Makanan</p>
                 </div>
                 <div class="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-white/60">Langkah 4</p>
-                    <p class="mt-2 font-semibold">Kebutuhan khusus</p>
+                    <p class="mt-2 font-semibold">Kebutuhan Tambahan</p>
                 </div>
             </div>
         </aside>
