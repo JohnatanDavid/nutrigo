@@ -240,11 +240,11 @@
             </button>
         </div>
 
-        @include('user.partials.recommendation_cards', [
+@include('user.partials.recommendation_cards', [
             'menu' => [
-                'breakfast' => $recommendation->breakfast,
-                'lunch' => $recommendation->lunch,
-                'dinner' => $recommendation->dinner
+                'breakfast' => $menuRec['breakfast'] ?? null,
+                'lunch' => $menuRec['lunch'] ?? null,
+                'dinner' => $menuRec['dinner'] ?? null
             ]
         ])
 
@@ -257,8 +257,9 @@
            <section class="mt-2 rounded-[28px] bg-[#F3E8CC] border border-[#E8DBB8] p-6 shadow-[0_12px_26px_rgba(161,114,0,0.16)]">
                 <h3 class="text-xl font-black text-[#17311f]">Pengingat Makan</h3>
 
-                <div class="mt-6 rounded-[24px] bg-[#ffc926] p-6 shadow-lg">
+<div class="mt-6 rounded-[24px] bg-[#F3E8CC] p-6 shadow-lg">
                     {{-- Timeline wrapper --}}
+
                     <div class="relative">
                         {{-- vertical connector background --}}
                         <div class="absolute left-[18px] top-0 bottom-0 w-px bg-white/40"></div>
@@ -311,13 +312,20 @@
                                 <div class="flex-1 rounded-2xl border border-white/20 backdrop-blur-sm px-5 py-4 {{ $stepCardClass }}">
                                     <div class="flex items-start justify-between gap-4">
                                         <div>
-                                            <p class="text-sm font-black {{ $stepTextClass }}">
+                                            <p class="text-sm font-black text-[#18542D]">
                                                 {{ ucfirst($r->meal_type === 'breakfast' ? 'Makan Pagi' : ($r->meal_type === 'lunch' ? 'Makan Siang' : 'Makan Malam')) }}
                                             </p>
-                                            <p class="text-xs text-white/90">Waktu {{ \Carbon\Carbon::parse($r->reminder_time)->format('H:i') }}</p>
+                                            <p class="text-xs text-[#18542D]/70">{{ \Carbon\Carbon::parse($r->reminder_time)->format('H:i') }}</p>
 
                                             <div class="mt-2">
-                                                <p class="text-xs font-bold uppercase tracking-[0.12em] text-white/85">{{ $statusLabel }}</p>
+                                                @php
+                                                    $statusBg = $isCompleted ? '#9ABC05' : ($isCurrent ? '#FFC926' : 'rgba(255,255,255,0.0)');
+                                                    $statusFg = $isCompleted ? '#FFFFFF' : '#18542D';
+                                                @endphp
+                                                <p class="text-xs font-bold uppercase tracking-[0.12em]" style="background-color: {{ $statusBg }}; color: {{ $statusFg }}; padding: 6px 10px; border-radius: 9999px; display: inline-block;">
+                                                    {{ $statusLabel }}
+                                                </p>
+
 
                                                 @if($selectedFood)
                                                     <p class="text-sm font-semibold mt-2 {{ $stepTextClass }}">
@@ -342,7 +350,7 @@
                                             @elseif($isCurrent)
                                                 {{-- Current actions --}}
                                                 @if($selectedFood)
-                                                    <button class="confirm-planned-btn rounded-full bg-[#18542D] px-4 py-2 text-xs font-bold text-white hover:bg-[#2B7A43] transition" data-meal="{{ $r->meal_type }}">Konfirmasi Log Menu</button>
+<button class="confirm-planned-btn rounded-full bg-[#18542D] px-4 py-2 text-xs font-bold text-white hover:bg-[#2B7A43] transition" data-meal="{{ $r->meal_type }}" type="button">Konfirmasi Log Menu</button>
                                                     <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="ganti-menu rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white">Ganti Menu</a>
                                                 @else
                                                     <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#1d5b2f]">Pilih Menu</a>
@@ -372,6 +380,8 @@
         const activity = document.getElementById('quickActivity');
         const allergen = document.getElementById('quickAllergen');
         const loadBtn = document.getElementById('loadRecommendationsBtn');
+        const refreshBtn = document.getElementById('refreshRecommendationsBtn');
+
 
         function updateButtonState() {
             loadBtn.disabled = !province || !province.value;
@@ -406,12 +416,26 @@
 
         province?.addEventListener('change', function () {
             updateButtonState();
-            // auto-fetch when user selects province
-            if (this.value) fetchRecommendations();
+            // legacy: keep recommendation filter behavior disabled for planned menu sync
+            // if you later want filtered regeneration, re-enable fetchRecommendations()
         });
 
-        loadBtn?.addEventListener('click', function () {
-            fetchRecommendations();
+        loadBtn?.addEventListener('click', async function () {
+            window.location.href = @json(route('user.dashboard'));
+        });
+
+        refreshBtn?.addEventListener('click', async function () {
+            const res = await fetch(@json(route('user.menu.regenerate')), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
+
+            window.location.href = @json(route('user.dashboard'));
         });
 
         updateButtonState();
@@ -544,25 +568,36 @@
             // attach events for modal buttons
             const modal = document.getElementById('food-modal-overlay');
             modal.querySelectorAll('.close-food-modal').forEach(btn => btn.addEventListener('click', () => modal.remove()));
+
+            // Enable selection and redirect back to dashboard for synchronization.
             const selectBtn = modal.querySelector('.select-from-modal');
             if (selectBtn) {
-                selectBtn.setAttribute('data-meal-type', mealType || 'lunch');
                 selectBtn.addEventListener('click', async function () {
                     const fid = this.getAttribute('data-food-id');
-                    const mtype = this.getAttribute('data-meal-type') || 'lunch';
+                    // Slot should come from the dashboard context, not from the modal.
+                    const mtype = mealType || 'breakfast';
+
                     try {
                         const formData = new FormData();
                         formData.append('food_id', fid);
                         formData.append('meal_type', mtype);
+
                         const r = await fetch(@json(route('user.menu.select')), {
                             method: 'POST',
                             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
                             body: formData,
                         });
+
                         const j = await r.json();
-                        showSuccessModal(j.message || 'Menu berhasil ditambahkan ke rencana.');
-                        setTimeout(() => location.reload(), 900);
-                    } catch (err) { showSuccessModal('Gagal menambahkan menu.'); }
+                        if (r.ok) {
+                            // Force reload so both recommendation cards + reminder cards re-render from menu_recommendations.
+                            window.location.href = @json(route('user.dashboard'));
+                        } else {
+                            showSuccessModal(j.message || 'Gagal menambahkan menu.');
+                        }
+                    } catch (err) {
+                        showSuccessModal('Gagal menambahkan menu.');
+                    }
                 });
             }
         } catch (err) {}

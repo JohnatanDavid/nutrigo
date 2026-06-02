@@ -20,12 +20,6 @@
                    <p class="mt-3 text-sm leading-6 text-[#75684f]">{{ $card->composition ?: 'Rekomendasi menu sehat yang sesuai dengan kebutuhanmu.' }}</p>
 
                     <div class="mt-5 flex items-center gap-3">
-                        <form method="POST" action="{{ route('user.menu.select') }}" class="select-menu-form flex-1" data-meal-type="{{ ['breakfast','lunch','dinner'][$index] ?? 'breakfast' }}">
-                            @csrf
-                            <input type="hidden" name="food_id" value="{{ $card->id }}">
-                            <input type="hidden" name="meal_type" value="{{ ['breakfast','lunch','dinner'][$index] ?? 'breakfast' }}">
-                            <button type="submit" class="w-full rounded-full bg-[#da2d1c] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(218,45,28,0.18)] transition hover:brightness-95">Pilih Menu</button>
-                        </form>
                         <a href="#" class="open-food-detail inline-flex items-center gap-2 rounded-full border border-[#1d5b2f] px-5 py-3 text-sm font-bold text-[#1d5b2f] transition hover:bg-white" data-food-id="{{ $card->id }}" data-meal-type="{{ ['breakfast','lunch','dinner'][$index] ?? 'breakfast' }}">Detail</a>
                     </div>
 

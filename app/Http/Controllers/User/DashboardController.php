@@ -180,8 +180,33 @@ class DashboardController extends Controller {
 
 
         // Planned menus for reminders (menu_recommendations)
-        $todayMenu = $this->menuService->generateDailyMenu($user);
-        $menuRec = $todayMenu;
+        // Both recommendation cards and reminder cards must read from the same planned state.
+        // Fallback: if the user has no saved planned menu yet, use generated recommendations.
+        $menuRec = [
+            'breakfast' => null,
+            'lunch' => null,
+            'dinner' => null,
+        ];
+
+        $todayMenuRec = \App\Models\MenuRecommendation::where('user_id', $user->id)
+            ->where('recommendation_date', $today)
+            ->first();
+
+        if ($todayMenuRec) {
+            $menuRec['breakfast'] = $todayMenuRec->breakfast_id ? \App\Models\Food::find($todayMenuRec->breakfast_id) : null;
+            $menuRec['lunch']     = $todayMenuRec->lunch_id ? \App\Models\Food::find($todayMenuRec->lunch_id) : null;
+            $menuRec['dinner']    = $todayMenuRec->dinner_id ? \App\Models\Food::find($todayMenuRec->dinner_id) : null;
+        } else {
+            // Planned menu should be driven by menu_recommendations once generated.
+            // Avoid falling back to generated recommendations here, because it can desync
+            // the UI from what was just saved.
+            $menuRec = [
+                'breakfast' => null,
+                'lunch'     => null,
+                'dinner'    => null,
+            ];
+        }
+
 
         // Completed histories for today (food_histories)
         $todayHistories = FoodHistory::where('user_id', $user->id)

@@ -1,16 +1,16 @@
 @extends('layouts.app')
 @section('title','Menu')
-@section('page-title','Menu Rekomendasi')
+@section('page-title','Menu Pengganti')
 
 @section('content')
 <div class="py-4 space-y-6" x-data="menuPage()">
 
-    {{-- ── HEADER KALORI TRACKER ─────────────────────────────── --}}
+    {{-- ── HEADER KALORI TRACKER (KEEP EXISTING DESIGN) ───────────────── --}}
     <div class="bg-ng-dark-green rounded-2xl p-6 text-white">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <p class="text-green-300 text-sm">🍽️ Temukan Menu Sehat Untukmu</p>
-                <h2 class="text-xl font-bold mt-1">Personalisasi sesuai wilayah & kebutuhanmu</h2>
+                <p class="text-green-300 text-sm">🧩 Pilih menu pengganti untukmu</p>
+                <h2 class="text-xl font-bold mt-1">Disusun sesuai kalori & wilayahmu</h2>
             </div>
             <div class="flex gap-4 text-center">
                 <div>
@@ -36,259 +36,226 @@
                 </div>
             </div>
         </div>
-        {{-- Progress Bar --}}
+
         @php
             $pct = min(100, ($totalSelected / max(1, $user->daily_calorie_needs ?? 2000)) * 100);
         @endphp
         <div class="mt-4 bg-green-800 rounded-full h-3">
-            <div class="h-3 rounded-full transition-all {{ $pct > 100 ? 'bg-red-400' : 'bg-ng-yellow' }}"
-                 style="width: {{ $pct }}%"></div>
+            <div
+                class="h-3 rounded-full transition-all {{ $pct > 100 ? 'bg-red-400' : 'bg-ng-yellow' }}"
+                style="width: {{ $pct }}%">
+            </div>
         </div>
         <p class="text-green-300 text-xs mt-1">{{ number_format($pct, 1) }}% dari target harian</p>
     </div>
 
-    {{-- ── MENU REKOMENDASI HARI INI ────────────────────────── --}}
-    <div class="card">
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <h3 class="text-lg font-bold text-gray-800">🌟 Rekomendasi Menu Hari Ini</h3>
-                <p class="text-sm text-gray-500">Disusun sesuai kalori & wilayahmu · {{ now()->isoFormat('D MMMM Y') }}</p>
-            </div>
-            <form method="POST" action="{{ route('user.menu.regenerate') }}">
-                @csrf
-                <button class="btn-outline text-sm">🔄 Ganti Menu</button>
-            </form>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            @foreach([
-                ['label'=>'Sarapan','icon'=>'🌅','food'=>$todayMenu->breakfast,'type'=>'breakfast','pct'=>30],
-                ['label'=>'Makan Siang','icon'=>'☀️','food'=>$todayMenu->lunch,'type'=>'lunch','pct'=>40],
-                ['label'=>'Makan Malam','icon'=>'🌙','food'=>$todayMenu->dinner,'type'=>'dinner','pct'=>30],
-            ] as $meal)
-                <div class="border-2 border-gray-100 rounded-2xl p-4 hover:border-ng-orange transition-all">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">{{ $meal['icon'] }}</span>
-                            <span class="font-semibold text-gray-700 text-sm">{{ $meal['label'] }}</span>
-                        </div>
-                        <span class="badge-orange text-xs">{{ $meal['pct'] }}%</span>
-                    </div>
-
-                    @if($meal['food'])
-                        <h4 class="font-bold text-gray-800 mb-1">{{ $meal['food']->name }}</h4>
-                        @if($meal['food']->origin)
-                            <p class="text-xs text-gray-400 mb-2">📍 {{ $meal['food']->origin }}</p>
-                        @endif
-                        <div class="text-2xl font-extrabold text-ng-orange mb-2">{{ $meal['food']->calories }} <span class="text-sm font-normal text-gray-500">kcal</span></div>
-
-                        {{-- Makro --}}
-                        <div class="grid grid-cols-3 gap-1 mb-3 text-center">
-                            <div class="bg-blue-50 rounded-lg p-2">
-                                <p class="text-xs text-blue-600 font-semibold">Protein</p>
-                                <p class="text-sm font-bold text-blue-700">{{ $meal['food']->proteins }}g</p>
-                            </div>
-                            <div class="bg-yellow-50 rounded-lg p-2">
-                                <p class="text-xs text-yellow-600 font-semibold">Karbo</p>
-                                <p class="text-sm font-bold text-yellow-700">{{ $meal['food']->carbohydrate }}g</p>
-                            </div>
-                            <div class="bg-red-50 rounded-lg p-2">
-                                <p class="text-xs text-red-600 font-semibold">Lemak</p>
-                                <p class="text-sm font-bold text-red-700">{{ $meal['food']->fat }}g</p>
-                            </div>
-                        </div>
-
-                        @if($meal['food']->composition)
-                            <p class="text-xs text-gray-500 mb-3 line-clamp-2">
-                                🥬 {{ $meal['food']->composition }}
-                            </p>
-                        @endif
-
-                        {{-- Cek alergi --}}
-                        @php
-                            $hasAllergen = false;
-                            foreach($allergens as $a) {
-                                if(str_contains(strtolower($meal['food']->composition ?? ''), strtolower($a))) {
-                                    $hasAllergen = true; break;
-                                }
-                            }
-                        @endphp
-                        @if($hasAllergen)
-                            <div class="bg-red-50 border border-red-200 rounded-lg p-2 mb-3 text-xs text-red-600">
-                                ⚠️ Mengandung bahan yang mungkin menjadi alergenmu
-                            </div>
-                        @endif
-
-                        <form method="POST" action="{{ route('user.menu.log') }}">
-                            @csrf
-                            <input type="hidden" name="food_id" value="{{ $meal['food']->id }}">
-                            <input type="hidden" name="meal_type" value="{{ $meal['type'] }}">
-                            <button class="btn-primary w-full text-sm py-2">
-                                ✅ Log Makan Ini
-                            </button>
-                        </form>
-                    @else
-                        <div class="text-center py-6 text-gray-400">
-                            <p class="text-3xl mb-2">🍽️</p>
-                            <p class="text-sm">Menu tidak tersedia</p>
-                        </div>
-                    @endif
-                </div>
-            @endforeach
-        </div>
+    <div class="mb-4">
+        <a href="{{ route('user.dashboard') }}" class="inline-flex items-center gap-2 text-[#18542D] font-bold hover:opacity-90">
+            <span aria-hidden>←</span> Kembali
+        </a>
     </div>
 
-    {{-- ── FILTER CEPAT ─────────────────────────────────────── --}}
-    <div class="card">
-        <h3 class="font-bold text-gray-800 mb-4">🔍 Jelajahi Menu Nusantara</h3>
-        <form method="GET" action="{{ route('user.menu') }}" class="flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-48">
-                <label class="text-xs font-semibold text-gray-600 block mb-1">Filter Wilayah</label>
-                <select name="province" class="input-field text-sm">
-                    <option value="">Semua Wilayah</option>
-                    @foreach(config('nutrigo.provinces') as $prov)
-                        <option value="{{ $prov }}" {{ $province == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-                    @endforeach
-                </select>
+    {{-- ── PAGE CONTEXT ─────────────────────────────────────────────── --}}
+
+    @php
+        $slotMealType = request('meal_type'); // breakfast | lunch | dinner (from Reminder -> Ganti Menu)
+        $slotLabel = match($slotMealType) {
+            'breakfast' => 'Sarapan',
+            'lunch' => 'Makan Siang',
+            'dinner' => 'Makan Malam',
+            default => 'Pengganti',
+        };
+
+        $regionChips = [
+            '' => 'Semua',
+            'Banten' => 'Banten',
+            'DKI Jakarta' => 'DKI Jakarta',
+            'Jawa Barat' => 'Jawa Barat',
+            'Jawa Tengah' => 'Jawa Tengah',
+            'DI Yogyakarta' => 'DI Yogyakarta',
+            'Jawa Timur' => 'Jawa Timur',
+        ];
+
+        $selectedProvince = request('province', '');
+
+        // Group foods by origin region label; fallback to first chip that matches.
+        $allFoods = $foods ?? collect();
+        $foodsByRegion = collect([
+            'Banten' => collect(),
+            'DKI Jakarta' => collect(),
+            'Jawa Barat' => collect(),
+            'Jawa Tengah' => collect(),
+            'DI Yogyakarta' => collect(),
+            'Jawa Timur' => collect(),
+        ]);
+
+        $safeAllergens = $allergens ?? [];
+
+        foreach ($allFoods as $food) {
+            $origin = $food->origin ?? '';
+            $regionKey = null;
+
+            foreach (array_keys($foodsByRegion->all()) as $key) {
+                if (stripos($origin, $key) !== false) {
+                    $regionKey = $key;
+                    break;
+                }
+            }
+
+            // If food has no origin match, treat as 'Semua' bucket by skipping grouping unless user chose no province.
+            if ($selectedProvince && $regionKey === null) {
+                continue;
+            }
+
+            $regionKey = $regionKey ?? 'Banten'; // deterministic fallback bucket (will be overridden if chips narrow)
+
+            // Skip allergens defensively (UI-only safety). Backend already filters for allergies in recommendation.
+            $composition = strtolower($food->composition ?? '');
+            $isSafe = true;
+            foreach ($safeAllergens as $a) {
+                if ($a && str_contains($composition, strtolower($a))) {
+                    $isSafe = false;
+                    break;
+                }
+            }
+            if (!$isSafe) continue;
+
+            if ($foodsByRegion->has($regionKey)) {
+                $foodsByRegion[$regionKey]->push($food);
+            }
+        }
+
+        // If user selected a province chip (not "Semua"), keep only that region.
+        // NOTE: "$selectedProvince" becomes '' when "Semua" is active.
+        if ($selectedProvince !== '' && $selectedProvince) {
+            foreach ($foodsByRegion->keys()->all() as $k) {
+                if ($k !== $selectedProvince) {
+                    $foodsByRegion[$k] = collect();
+                }
+            }
+        }
+
+
+        // Clean empty regions list for rendering order
+        $orderedRegions = ['Jawa Timur','Jawa Tengah','DI Yogyakarta','DKI Jakarta','Jawa Barat','Banten'];
+    @endphp
+
+    {{-- ── Search + Region Chips (Flow-B only) ───────────────────────── --}}
+    <section class="rounded-[28px] bg-[#F3E8CC] border border-[#E8DBB8] p-6 shadow-[0_12px_26px_rgba(161,114,0,0.16)]">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+                <h3 class="text-xl font-black text-[#17311f]">Pilih menu pengganti · {{ $slotLabel }}</h3>
+                <p class="mt-2 text-sm text-[#4d5a4f]">Klik <strong>Pilih Menu</strong> untuk mengganti slot pada rencana makanmu.</p>
             </div>
-            <div class="flex-1 min-w-36">
-                <label class="text-xs font-semibold text-gray-600 block mb-1">Tipe Makan</label>
-                <select name="meal_type" class="input-field text-sm">
-                    <option value="">Semua</option>
-                    <option value="breakfast" {{ request('meal_type')=='breakfast'?'selected':'' }}>Sarapan</option>
-                    <option value="lunch"     {{ request('meal_type')=='lunch'?'selected':'' }}>Makan Siang</option>
-                    <option value="dinner"    {{ request('meal_type')=='dinner'?'selected':'' }}>Makan Malam</option>
-                    <option value="snack"     {{ request('meal_type')=='snack'?'selected':'' }}>Snack</option>
-                </select>
-            </div>
-            <div class="flex-1 min-w-36">
-                <label class="text-xs font-semibold text-gray-600 block mb-1">Kalori Maks</label>
-                <select name="max_cal" class="input-field text-sm">
-                    <option value="">Semua</option>
-                    <option value="200"  {{ request('max_cal')=='200'?'selected':'' }}>&lt; 200 kcal</option>
-                    <option value="400"  {{ request('max_cal')=='400'?'selected':'' }}>&lt; 400 kcal</option>
-                    <option value="600"  {{ request('max_cal')=='600'?'selected':'' }}>&lt; 600 kcal</option>
-                    <option value="800"  {{ request('max_cal')=='800'?'selected':'' }}>&lt; 800 kcal</option>
-                </select>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="text-xs font-semibold text-gray-600 block mb-1">Cari makanan</label>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ request('q') }}"
+                    class="input-field text-sm w-full"
+                    placeholder="Contoh: rawon, soto, pecel..."
+                    oninput="this.form.submit()"
+                >
             </div>
             <div>
-                <button class="btn-primary text-sm">Filter</button>
-                <a href="{{ route('user.menu') }}" class="btn-outline text-sm ml-2">Reset</a>
+                {{-- keep query params in same request form --}}
+                <form method="GET" action="{{ route('user.menu') }}" class="hidden"></form>
             </div>
-        </form>
+        </div>
 
-        {{-- Alergi aktif --}}
-        @if(count($allergens) > 0)
-            <div class="mt-3 flex flex-wrap gap-2 items-center">
-                <span class="text-xs text-gray-500">Alergi aktif:</span>
-                @foreach($allergens as $a)
-                    <span class="bg-red-100 text-red-700 text-xs px-2.5 py-1 rounded-full font-medium">🚫 {{ $a }}</span>
+        <form method="GET" action="{{ route('user.menu') }}" class="mt-4">
+            {{-- preserve slot so we update correct *_id --}}
+            @if($slotMealType)
+                <input type="hidden" name="meal_type" value="{{ $slotMealType }}">
+            @endif
+            {{-- preserve search query --}}
+            @if(request('q'))
+                <input type="hidden" name="q" value="{{ request('q') }}">
+            @endif
+
+            <div class="flex flex-wrap gap-2">
+                @foreach($regionChips as $prov => $label)
+                    @php
+                        $isActive = ($selectedProvince === $prov);
+                        $params = array_filter([
+                            'meal_type' => $slotMealType,
+                            'province' => $prov,
+                            'q' => request('q'),
+                        ]);
+                    @endphp
+                    <a
+                        href="{{ route('user.menu', $params) }}"
+                        class="px-3 py-2 rounded-full text-xs font-bold border transition {{ $isActive ? 'bg-ng-orange text-white border-ng-orange' : 'bg-white text-gray-700 border-gray-200 hover:border-ng-orange hover:text-ng-orange' }}"
+                    >{{ $label }}</a>
                 @endforeach
             </div>
-        @endif
-    </div>
+        </form>
+    </section>
 
-    {{-- ── DAFTAR MAKANAN ──────────────────────────────────── --}}
-    <div>
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-800">
-                Semua Menu
-                @if(request('province'))
-                    <span class="text-ng-orange">· {{ request('province') }}</span>
-                @endif
-            </h3>
-            <span class="text-sm text-gray-500">{{ $foods->total() }} makanan</span>
-        </div>
+    {{-- ── Foods grouped by region ─────────────────────────────── --}}
+    <section class="space-y-6">
+        @foreach($orderedRegions as $region)
+            @php
+                $bucket = $foodsByRegion[$region] ?? collect();
+            @endphp
+            @continue($bucket->isEmpty())
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @forelse($foods as $food)
-                @php
-                    $safe = true;
-                    foreach($allergens as $a) {
-                        if(str_contains(strtolower($food->composition ?? ''), strtolower($a))) { $safe = false; break; }
-                    }
-                @endphp
-                <div class="card hover:shadow-md transition-all relative {{ !$safe ? 'opacity-75' : '' }}"
-                     x-data="{ expanded: false }">
-                    {{-- Badge alergi --}}
-                    @if(!$safe)
-                        <span class="absolute top-3 right-3 bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium">⚠️ Alergen</span>
-                    @endif
+            <div class="rounded-[28px] bg-[#fff4cb] border border-[#ece1c1] p-6">
+                <h4 class="text-lg font-black text-[#18542D] mb-4">{{ $region }}</h4>
 
-                    {{-- Meal type badge --}}
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="{{ match($food->meal_type) {
-                            'breakfast' => 'badge-orange',
-                            'lunch'     => 'badge-green',
-                            'dinner'    => 'bg-purple-100 text-purple-700 text-xs px-2.5 py-1 rounded-full font-medium',
-                            default     => 'bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full font-medium',
-                        } }}">
-                            {{ match($food->meal_type) {
-                                'breakfast' => '🌅 Sarapan',
-                                'lunch'     => '☀️ Siang',
-                                'dinner'    => '🌙 Malam',
-                                default     => '🍪 Snack',
-                            } }}
-                        </span>
-                    </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($bucket as $food)
+                        <article class="rounded-2xl bg-white/70 ring-1 ring-black/5 p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-black text-[#18542D]">{{ $food->name }}</p>
+                                    @if($food->origin)
+                                        <p class="text-xs text-gray-500 mt-1">📍 {{ $food->origin }}</p>
+                                    @endif
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-extrabold text-ng-orange">{{ $food->calories }} <span class="text-xs font-normal text-gray-500">kcal</span></div>
+                                </div>
+                            </div>
 
-                    <h4 class="font-bold text-gray-800 mb-1">{{ $food->name }}</h4>
+                            <div class="mt-3 flex gap-3 text-xs text-gray-700">
+                                <span class="bg-blue-50 rounded-lg px-2 py-1">💪 {{ $food->proteins }}g</span>
+                                <span class="bg-yellow-50 rounded-lg px-2 py-1">🌾 {{ $food->carbohydrate }}g</span>
+                            </div>
 
-                    @if($food->origin)
-                        <p class="text-xs text-gray-400 mb-2">📍 {{ $food->origin }}</p>
-                    @endif
-
-                    <div class="text-2xl font-extrabold text-ng-orange mb-3">
-                        {{ $food->calories }} <span class="text-sm font-normal text-gray-500">kcal</span>
-                    </div>
-
-                    {{-- Makro mini --}}
-                    <div class="flex gap-3 text-xs text-gray-600 mb-3">
-                        <span>🥩 {{ $food->proteins }}g protein</span>
-                        <span>🌾 {{ $food->carbohydrate }}g karbo</span>
-                        <span>🧈 {{ $food->fat }}g lemak</span>
-                    </div>
-
-                    {{-- Expandable composition --}}
-                    @if($food->composition)
-                        <div x-show="!expanded" class="text-xs text-gray-500 line-clamp-2 mb-2">{{ $food->composition }}</div>
-                        <div x-show="expanded" x-transition class="text-xs text-gray-500 mb-2">{{ $food->composition }}</div>
-                        <button @click="expanded = !expanded" class="text-xs text-ng-orange hover:underline mb-3">
-                            <span x-text="expanded ? 'Sembunyikan ↑' : 'Lihat komposisi ↓'"></span>
-                        </button>
-                    @endif
-
-                    {{-- Log button --}}
-                    <div x-data="{ showLog: false }">
-                        <button @click="showLog = !showLog" class="btn-primary w-full text-sm py-2">
-                            + Log Makan
-                        </button>
-                        <div x-show="showLog" x-transition class="mt-3 space-y-2">
-                            @foreach(['breakfast'=>'🌅 Sarapan','lunch'=>'☀️ Makan Siang','dinner'=>'🌙 Makan Malam','snack'=>'🍪 Snack'] as $type => $typeLabel)
-                                <form method="POST" action="{{ route('user.menu.log') }}">
+                            <div class="mt-4">
+                                <form method="POST" action="{{ route('user.menu.select') }}" class="pick-menu-form">
                                     @csrf
                                     <input type="hidden" name="food_id" value="{{ $food->id }}">
-                                    <input type="hidden" name="meal_type" value="{{ $type }}">
-                                    <button class="w-full text-left text-sm py-2 px-3 bg-gray-50 hover:bg-orange-50 hover:text-ng-orange rounded-lg transition">
-                                        {{ $typeLabel }}
+                                    <input type="hidden" name="meal_type" value="{{ $slotMealType }}">
+                                    <input type="hidden" name="_redirect_to" value="{{ route('user.dashboard') }}">
+                                    <button
+                                        type="submit"
+                                        class="w-full rounded-full bg-[#18542D] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(24,91,45,0.18)] transition hover:bg-[#2B7A43]"
+                                    >
+                                        Pilih Menu
                                     </button>
                                 </form>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            @empty
-                <div class="col-span-3 text-center py-12 text-gray-400">
-                    <p class="text-4xl mb-3">🍽️</p>
-                    <p class="font-semibold">Tidak ada menu ditemukan</p>
-                    <p class="text-sm">Coba ubah filter atau reset pencarian</p>
-                </div>
-            @endforelse
-        </div>
+                            </div>
 
-        {{-- Pagination --}}
-        <div class="mt-6">{{ $foods->withQueryString()->links() }}</div>
-    </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
+
+        @if(($foods ?? collect())->isEmpty())
+            <div class="rounded-[28px] bg-white/60 border border-[#ece1c1] p-10 text-center text-gray-500">
+                <p class="text-4xl mb-2">🍽️</p>
+                <p class="font-semibold">Tidak ada menu ditemukan</p>
+                <p class="text-sm mt-1">Coba ubah filter wilayah atau kata kunci pencarian.</p>
+            </div>
+        @endif
+    </section>
 
 </div>
 
@@ -298,5 +265,51 @@ function menuPage() {
         totalSelected: {{ $totalSelected }}
     }
 }
+
+// Prevent raw JSON page from flashing: submit via AJAX, then redirect.
+document.addEventListener('submit', async function (e) {
+    const form = e.target && e.target.closest ? e.target.closest('.pick-menu-form') : null;
+    if (!form) return;
+
+    e.preventDefault();
+
+    const url = form.action;
+    const fd = new FormData(form);
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: fd,
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                // show success toast/modal (dashboard provides showSuccessModal)
+                if (typeof showSuccessModal === 'function') {
+                    showSuccessModal(data.message || 'Menu berhasil dipilih', null);
+                }
+
+                const redirectTo = form.querySelector('input[name="_redirect_to"]')?.value || '{{ route('user.dashboard') }}';
+                setTimeout(() => window.location.href = redirectTo, 900);
+            } else {
+                if (typeof showSuccessModal === 'function') {
+                    showSuccessModal(data.message || 'Gagal memilih menu');
+                }
+            }
+    } catch (err) {
+        if (typeof showSuccessModal === 'function') {
+            showSuccessModal('Terjadi kesalahan.');
+        } else {
+            alert('Terjadi kesalahan.');
+        }
+    }
+});
 </script>
 @endsection
+
+
