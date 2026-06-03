@@ -37,7 +37,8 @@ class MenuController extends Controller {
 
         $foods = Food::where('is_active', true)
             ->when($province,  fn($q) => $q->where('origin', 'like', "%{$province}%"))
-            ->when($mealType,  fn($q) => $q->where('meal_type', $mealType))
+            // Slot-based selection: do NOT hard-filter by foods.meal_type.
+            // We only use meal_type query param to compute slot calorie target.
             ->when($targetForMeal !== null, function ($q) use ($minCal, $maxCalBySlot) {
                 $q->where('calories', '>=', $minCal)->where('calories', '<=', $maxCalBySlot);
             })
