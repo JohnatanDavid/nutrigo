@@ -14,18 +14,37 @@ class MenuController extends Controller {
 
     public function __construct(private MenuRecommendationService $menuService) {}
 
-public function index(Request $request) {
-    $user     = Auth::user();
-    $province = $request->get('province', $user->province);
-    $mealType = $request->get('meal_type');
-    $maxCal   = $request->get('max_cal');
+    public function index(Request $request) {
+        $user     = Auth::user();
+        $province = $request->get('province', $user->province);
+        $mealType = $request->get('meal_type');
+        $maxCal   = $request->get('max_cal');
 
-    $foods = Food::where('is_active', true)
-        ->when($province,  fn($q) => $q->where('origin', 'like', "%{$province}%"))
-        ->when($mealType,  fn($q) => $q->where('meal_type', $mealType))
-        ->when($maxCal,    fn($q) => $q->where('calories', '<=', (float)$maxCal))
-        ->orderBy('name')
-        ->paginate(12);
+        // Slot-based calorie targeting (requested by spec)
+        $dailyCal = (float) ($user->daily_calorie_needs ?? 2000);
+        $targets = [
+            'breakfast' => $dailyCal * 0.30,
+            'lunch'     => $dailyCal * 0.40,
+            'dinner'    => $dailyCal * 0.30,
+        ];
+
+        $targetForMeal = $mealType && isset($targets[$mealType]) ? $targets[$mealType] : null;
+
+        // Small tolerance is acceptable. Use +/- 25% to ensure feasibility.
+        $tolerance = 0.25;
+        $minCal = $targetForMeal !== null ? ($targetForMeal * (1 - $tolerance)) : null;
+        $maxCalBySlot = $targetForMeal !== null ? ($targetForMeal * (1 + $tolerance)) : null;
+
+        $foods = Food::where('is_active', true)
+            ->when($province,  fn($q) => $q->where('origin', 'like', "%{$province}%"))
+            ->when($mealType,  fn($q) => $q->where('meal_type', $mealType))
+            ->when($targetForMeal !== null, function ($q) use ($minCal, $maxCalBySlot) {
+                $q->where('calories', '>=', $minCal)->where('calories', '<=', $maxCalBySlot);
+            })
+            ->when($maxCal && $targetForMeal === null, fn($q) => $q->where('calories', '<=', (float)$maxCal))
+            ->orderBy('name')
+            ->paginate(12);
+
 
     $allergens     = $user->allergies->pluck('allergen')->toArray();
     $todayMenu     = $this->menuService->generateDailyMenu($user);

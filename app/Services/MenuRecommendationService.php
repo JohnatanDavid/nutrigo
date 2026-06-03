@@ -97,7 +97,8 @@ class MenuRecommendationService
 
         // ── 2. Bangun query dasar ─────────────────────────────────
         $query = Food::where('is_active', true)
-            ->where('meal_type', $mealType)
+            // Slot-based recommendation: do NOT hard-filter by foods.meal_type.
+            // $mealType is only used as a slot label to apply calorie targeting.
             ->where('calories', '>=', $minCal)
             ->where('calories', '<=', $maxCal)
             ->whereNotIn('id', array_filter($excludeIds));
@@ -131,33 +132,96 @@ class MenuRecommendationService
             $foods = $foods->filter(fn (Food $food) => !$this->foodContainsAnyAllergen($food->composition ?? '', $allergens));
         }
 
-        if ($foods->isEmpty()) return null;
+        // If still no candidates after strict filtering, broaden tolerance once (prevents dinner null)
+        if ($foods->isEmpty()) {
+            $broadTolerance = min(0.45, $tolerance + 0.15);
+            $minCalBroad = $targetCalories * (1 - $broadTolerance);
+            $maxCalBroad = $targetCalories * (1 + $broadTolerance);
 
-        // ── 6. Scoring sistem: prioritaskan makanan lokal ─────────
+            $queryBroad = Food::where('is_active', true)
+                ->where('meal_type', $mealType)
+                ->where('calories', '>=', $minCalBroad)
+                ->where('calories', '<=', $maxCalBroad)
+                ->whereNotIn('id', array_filter($excludeIds));
+
+            foreach ($allergens as $allergen) {
+                $queryBroad->whereRaw('LOWER(composition) NOT LIKE ?', ['%' . mb_strtolower($allergen) . '%']);
+            }
+
+            $foods = $queryBroad->get();
+            $foods = $foods->filter(fn (Food $food) => !$this->foodContainsAnyAllergen($food->composition ?? '', $allergens));
+
+            if ($foods->isEmpty()) return null;
+        }
+
+
+        // ── 6. Scoring sistem: priority strict (Province -> MainMeal -> National -> Others) ─────────
         $province = $user->province ?? '';
-        $scored   = $foods->map(function (Food $food) use ($province, $targetCalories, $bmi) {
+
+        // medical needs as boosts only (NOT filters)
+        $medicalBoostItems = [];
+        if (method_exists($user, 'medicalNeeds')) {
+            $medicalNeeds = $user->medicalNeeds()
+                ->where('is_active', true)
+                ->get();
+
+            $medicalBoostItems = $medicalNeeds
+                ->pluck('food_item')
+                ->filter()
+                ->map(fn ($v) => mb_strtolower($v))
+                ->values()
+                ->all();
+        }
+
+
+        $scored = $foods->map(function (Food $food) use ($province, $targetCalories, $bmi, $medicalBoostItems) {
             $score = 0;
 
-            // +30 poin jika dari wilayah user
-            if ($province && str_contains(strtolower($food->origin ?? ''), strtolower($province))) {
+            // Priority 1: Province/region foods first (strong)
+            if ($province && $this->stringContainsOrigin($food->origin ?? '', $province)) {
+                $score += 1000;
+            }
+
+            // Priority 2: Main meal foods (strong)
+            if (($food->food_category ?? null) === 'main_meal') {
+                $score += 500;
+            }
+
+            // Priority 3: National foods (fallback)
+            if (!empty($food->is_national)) {
+                $score += 200;
+            }
+
+            // Priority 4: Other categories (low)
+            if (($food->food_category ?? null) !== 'main_meal' && empty($food->is_national)) {
+                $score += 25;
+            }
+
+            // Medical needs boosts (soft)
+            if (!empty($medicalBoostItems)) {
+                $composition = mb_strtolower($food->composition ?? '');
+                foreach ($medicalBoostItems as $item) {
+                    if ($item && $item !== '' && str_contains($composition, $item)) {
+                        $score += 60;
+                    }
+                }
+            }
+
+            // Calories closeness (secondary)
+            $calorieDiff = abs($food->calories - $targetCalories);
+            $score += max(0, 100 - ($calorieDiff / 5));
+
+            // BMI preferences (still secondary)
+            if ($bmi < 18.5 && ($food->proteins ?? 0) > 15) {
+                $score += 30;
+            }
+            if ($bmi >= 25 && ($food->fat ?? 0) < 10) {
                 $score += 30;
             }
 
-            // +20 poin jika ada origin (makanan nusantara teridentifikasi)
-            if ($food->origin) $score += 20;
-
-            // +10 poin jika kalori mendekati target (makin dekat makin tinggi)
-            $calorieDiff = abs($food->calories - $targetCalories);
-            $score += max(0, 10 - ($calorieDiff / 50));
-
-            // +10 poin untuk makanan tinggi protein jika BMI rendah
-            if ($bmi < 18.5 && $food->proteins > 15) $score += 10;
-
-            // +10 poin untuk makanan rendah lemak jika BMI tinggi
-            if ($bmi >= 25 && $food->fat < 10) $score += 10;
-
             return ['food' => $food, 'score' => $score];
         });
+
 
         // Ambil top 5, lalu pilih random dari top 5 (agar ada variasi)
         $top5 = $scored->sortByDesc('score')->take(5)->pluck('food');
@@ -285,8 +349,19 @@ class MenuRecommendationService
         return false;
     }
 
+    private function stringContainsOrigin(string $origin, string $province): bool
+    {
+        $origin = mb_strtolower($origin);
+        $province = mb_strtolower($province);
+
+        if (!$province) return false;
+
+        return str_contains($origin, $province);
+    }
+
     private function normalizeCompositionLabel(string $value): ?string
     {
+
         $value = trim(preg_replace('/\s+/u', ' ', mb_strtolower($value)) ?? '');
 
         if ($value === '') {

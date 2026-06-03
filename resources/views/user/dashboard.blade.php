@@ -256,50 +256,99 @@
 
            <section class="mt-2 rounded-[28px] bg-[#F3E8CC] border border-[#E8DBB8] p-6 shadow-[0_12px_26px_rgba(161,114,0,0.16)]">
                 <h3 class="text-xl font-black text-[#17311f]">Pengingat Makan</h3>
+
                 <div class="mt-6 rounded-[24px] bg-[#ffc926] p-6 shadow-lg">
-                    <div class="space-y-4">
+                    {{-- Timeline wrapper --}}
+                    <div class="relative">
+                        {{-- vertical connector background --}}
+                        <div class="absolute left-[18px] top-0 bottom-0 w-px bg-white/40"></div>
+
                         @foreach($reminders as $r)
                             @php
-                                $selected = null;
-                                if ($r->meal_type === 'breakfast') $selected = $recommendation->breakfast ?? null;
-                                if ($r->meal_type === 'lunch') $selected = $recommendation->lunch ?? null;
-                                if ($r->meal_type === 'dinner') $selected = $recommendation->dinner ?? null;
+                                $meal = $r->meal_type;
+
+                                $planned = $menuRec[$meal] ?? null;
+                                $completedFoodHistory = $historyByMealType[$meal] ?? null;
+
+                                $now = \Carbon\Carbon::now();
+                                $reminderAt = \Carbon\Carbon::parse($r->reminder_time)->today();
+
+                                // Completed if already logged for today
+                                $isCompleted = (bool) $completedFoodHistory;
+
+                                // Current = not completed and time passed for its reminder slot
+                                $isCurrent = !$isCompleted && $reminderAt->lessThanOrEqualTo($now);
+
+                                $statusLabel = $isCompleted ? 'Completed' : ($isCurrent ? 'Current Meal' : 'Upcoming');
+
+                                $selectedFood = $isCompleted ? ($completedFoodHistory->food ?? null) : $planned;
+
+                                $stepDotClass = $isCompleted
+                                    ? 'bg-[#18542D]'
+                                    : ($isCurrent ? 'bg-[#F96015]' : 'bg-white/30');
+
+                                $stepCardClass = $isCompleted
+                                    ? 'bg-white/10 opacity-60'
+                                    : ($isCurrent ? 'bg-[#fff8ea] border-[#18542D]/30' : 'bg-white/15');
+
+                                $stepTextClass = $isCompleted ? 'text-white/80' : 'text-white';
                             @endphp
-                            <div class="flex items-center gap-4">
-                                @if($loop->iteration == 2) bg-[#F96015]
-                                    @else bg-white/20
-                                @endif
-                                <div class="relative flex flex-col items-center w-8">
-                                <div class="w-5 h-5 rounded-full border-4 border-white
-                                    {{ $loop->first ? 'bg-[#d52518]' : 'bg-[#9ABC05]' }}">
+
+                            {{-- Step row --}}
+                            <div class="relative flex gap-4 pb-6 @if($loop->last) pb-0 @endif">
+                                {{-- Dot + left alignment --}}
+                                <div class="z-10 flex flex-col items-center" style="width:40px">
+                                    <div class="h-5 w-5 rounded-full border-4 border-white {{ $stepDotClass }} flex items-center justify-center">
+                                        @if($isCompleted)
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8.5 8.5a1 1 0 01-1.414 0l-3.0-3.0a1 1 0 011.414-1.414l2.293 2.293 7.793-7.793a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        @endif
+                                    </div>
                                 </div>
 
-                                @unless($loop->last)
-                                    <div class="w-1 flex-1 bg-white/70"></div>
-                                @endunless
-                            </div>
-                                <div class="flex-1 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 px-5 py-4">
-                                    <div class="flex items-center justify-between">
+                                {{-- Card --}}
+                                <div class="flex-1 rounded-2xl border border-white/20 backdrop-blur-sm px-5 py-4 {{ $stepCardClass }}">
+                                    <div class="flex items-start justify-between gap-4">
                                         <div>
-                                            <p class="text-sm font-black text-white">{{ ucfirst($r->meal_type === 'breakfast' ? 'Makan Pagi' : ($r->meal_type === 'lunch' ? 'Makan Siang' : 'Makan Malam')) }}</p>
-                                            <p class="text-xs text-white/90">Deadline {{ \Carbon\Carbon::parse($r->reminder_time)->format('H:i') }}</p>
-                                            @if($selected)
-                                                <p class="text-sm text-white/90 mt-2">Terpilih: <strong>{{ $selected->name }}</strong></p>
-                                                <div class="mt-2 flex gap-2 text-xs text-white/95">
-                                                    <span class="rounded-full bg-white/20 px-2 py-1">{{ $selected->calories }} kkal</span>
-                                                    <span class="rounded-full bg-white/20 px-2 py-1">{{ $selected->proteins }}g Pro</span>
-                                                    <span class="rounded-full bg-white/20 px-2 py-1">{{ $selected->carbohydrates ?? '—' }}g Karbo</span>
-                                                </div>
-                                            @else
-                                                <p class="text-sm text-white/90 mt-2">Belum ada menu terpilih</p>
-                                            @endif
+                                            <p class="text-sm font-black {{ $stepTextClass }}">
+                                                {{ ucfirst($r->meal_type === 'breakfast' ? 'Makan Pagi' : ($r->meal_type === 'lunch' ? 'Makan Siang' : 'Makan Malam')) }}
+                                            </p>
+                                            <p class="text-xs text-white/90">Waktu {{ \Carbon\Carbon::parse($r->reminder_time)->format('H:i') }}</p>
+
+                                            <div class="mt-2">
+                                                <p class="text-xs font-bold uppercase tracking-[0.12em] text-white/85">{{ $statusLabel }}</p>
+
+                                                @if($selectedFood)
+                                                    <p class="text-sm font-semibold mt-2 {{ $stepTextClass }}">
+                                                        {{ $selectedFood->name }}
+                                                    </p>
+                                                    <div class="mt-2 flex gap-2 flex-wrap">
+                                                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold">{{ $selectedFood->calories }} kkal</span>
+                                                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold">{{ $selectedFood->proteins }}g Pro</span>
+                                                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold">{{ $selectedFood->carbohydrate ?? ($selectedFood->carbohydrates ?? '—') }}g Karbo</span>
+                                                    </div>
+                                                @else
+                                                    <p class="text-sm mt-2 {{ $stepTextClass }}">Belum ada menu terpilih</p>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            @if($selected)
-                                                <button class="confirm-planned-btn rounded-full bg-[#18542D] px-4 py-2 text-xs font-bold text-white hover:bg-[#2B7A43] transition"" data-meal="{{ $r->meal_type }}">Konfirmasi Log Menu</button>
-                                                <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="ganti-menu rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white">Ganti Menu</a>
+
+                                        <div class="flex flex-col items-end gap-2">
+                                            @if($isCompleted)
+                                                <div class="flex items-center gap-2">
+                                                    <span class="rounded-full bg-white/15 px-3 py-2 text-xs font-bold text-white">Logged</span>
+                                                </div>
+                                            @elseif($isCurrent)
+                                                {{-- Current actions --}}
+                                                @if($selectedFood)
+                                                    <button class="confirm-planned-btn rounded-full bg-[#18542D] px-4 py-2 text-xs font-bold text-white hover:bg-[#2B7A43] transition" data-meal="{{ $r->meal_type }}">Konfirmasi Log Menu</button>
+                                                    <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="ganti-menu rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white">Ganti Menu</a>
+                                                @else
+                                                    <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#1d5b2f]">Pilih Menu</a>
+                                                @endif
                                             @else
-                                                <a href="{{ route('user.menu') }}?meal_type={{ $r->meal_type }}" class="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#1d5b2f]">Pilih Menu</a>
+                                                {{-- Upcoming inactive --}}
                                             @endif
                                         </div>
                                     </div>
@@ -309,6 +358,7 @@
                     </div>
                 </div>
             </section>
+
         </div>
     </div>
 </div>

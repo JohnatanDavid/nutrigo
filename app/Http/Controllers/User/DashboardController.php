@@ -147,7 +147,49 @@ class DashboardController extends Controller {
             ->get();
 
         $allergies = $user->allergies()->pluck('allergen');
-        $reminders = $user->reminders()->where('is_active', true)->get();
+
+        // Ensure default reminder rows exist for every user
+        // (prevents empty reminder timeline for existing users)
+        $hasAnyActiveReminders = $user->reminders()->where('is_active', true)->exists();
+        if (!$hasAnyActiveReminders) {
+            MealReminder::updateOrCreate(
+                ['user_id' => $user->id, 'meal_type' => 'breakfast'],
+                ['reminder_time' => '07:00:00', 'is_active' => true]
+            );
+            MealReminder::updateOrCreate(
+                ['user_id' => $user->id, 'meal_type' => 'lunch'],
+                ['reminder_time' => '12:00:00', 'is_active' => true]
+            );
+            MealReminder::updateOrCreate(
+                ['user_id' => $user->id, 'meal_type' => 'dinner'],
+                ['reminder_time' => '18:30:00', 'is_active' => true]
+            );
+        }
+
+        // Keep deterministic timeline order: breakfast -> lunch -> dinner
+        $reminders = $user->reminders()
+            ->where('is_active', true)
+            ->orderByRaw("CASE meal_type
+                WHEN 'breakfast' THEN 1
+                WHEN 'lunch' THEN 2
+                WHEN 'dinner' THEN 3
+                ELSE 99
+            END")
+            ->get();
+
+
+
+        // Planned menus for reminders (menu_recommendations)
+        $todayMenu = $this->menuService->generateDailyMenu($user);
+        $menuRec = $todayMenu;
+
+        // Completed histories for today (food_histories)
+        $todayHistories = FoodHistory::where('user_id', $user->id)
+            ->where('consumed_date', $today)
+            ->get();
+
+        $historyByMealType = $todayHistories->keyBy('meal_type');
+
         $unreadNotifications = $user->notifications()->where('is_read', false)->count();
         $needsOnboarding = !$user->onboarding_completed;
         $provinceOptions = config('nutrigo.provinces');
@@ -163,8 +205,10 @@ class DashboardController extends Controller {
         return view('user.dashboard', compact(
             'user','recommendation','todayCalories','allergies',
             'weeklyHistory','articles','reminders','unreadNotifications','needsOnboarding',
-            'provinceOptions','allergyOptions','activityOptions'
+            'provinceOptions','allergyOptions','activityOptions',
+            'menuRec','historyByMealType'
         ));
+
     }
 
     public function filterRecommendations(Request $request)
