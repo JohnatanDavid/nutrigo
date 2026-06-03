@@ -2,24 +2,25 @@
 namespace Database\Seeders;
 
 use App\Models\Food;
+use App\Models\MenuRecommendation;
 use Illuminate\Database\Seeder;
 
 class FoodSeeder extends Seeder
 {
     public function run(): void
     {
-        // ── Step 1: Import db_food_final.csv (1345 makanan) ───────
-        $this->importFoodFinal();
+        // ── Replace data with db_final_food_javanese.csv ───────────
+        MenuRecommendation::query()->delete();
+        Food::query()->delete();
 
-        // ── Step 2: Update kolom origin dari db_food_with_origin.csv
-        $this->importOrigins();
+        $this->importFoodFinal();
 
         $this->command->info('✅ Total makanan: ' . Food::count());
     }
 
     private function importFoodFinal(): void
     {
-        $path = database_path('data/db_food_final.csv');
+        $path = database_path('data/db_final_food_javanese.csv');
         if (!file_exists($path)) {
             $this->command->error("❌ File tidak ditemukan: {$path}");
             return;
@@ -40,12 +41,15 @@ class FoodSeeder extends Seeder
             Food::updateOrCreate(
                 ['name' => $name],
                 [
-                    'calories'     => (float)($data['calories'] ?? 0),
-                    'proteins'     => (float)($data['proteins'] ?? 0),
-                    'fat'          => (float)($data['fat'] ?? 0),
-                    'carbohydrate' => (float)($data['carbohydrate'] ?? 0),
+                    'calories'     => $this->normalizeNumber($data['calories'] ?? 0),
+                    'proteins'     => $this->normalizeNumber($data['proteins'] ?? 0),
+                    'fat'          => $this->normalizeNumber($data['fat'] ?? 0),
+                    'carbohydrate' => $this->normalizeNumber($data['carbohydrate'] ?? 0),
                     'composition'  => $data['composition'] ?? null,
-                    'origin'       => null,
+                    'origin'       => $data['origin'] ?? null,
+                    'food_category'=> $data['food_category'] ?? $this->detectFoodCategory($name, $data['composition'] ?? ''),
+                    'is_national'  => $this->normalizeBoolean($data['is_national'] ?? false),
+                    'region'       => $this->normalizeRegion($data['region'] ?? null, $data['origin'] ?? null, $data['is_national'] ?? false),
                     'meal_type'    => $this->detectMealType($data),
                     'is_active'    => true,
                 ]
@@ -53,38 +57,60 @@ class FoodSeeder extends Seeder
             $count++;
         }
         fclose($handle);
-        $this->command->info("✅ Import db_food_final: {$count} makanan");
+        $this->command->info("✅ Import db_final_food_javanese: {$count} makanan");
     }
 
-    private function importOrigins(): void
+    private function detectFoodCategory(string $name, string $composition): string
     {
-        $path = database_path('data/db_food_with_origin.csv');
-        if (!file_exists($path)) {
-            $this->command->warn("⚠️ db_food_with_origin.csv tidak ditemukan, skip.");
-            return;
+        $text = strtolower(trim($name . ' ' . $composition));
+
+        $categories = [
+            'fruit' => ['apel','pisang','mangga','jeruk','pepaya','semangka','melon','salak','rambutan','alpukat','nanas','sirsak','manggis','anggur'],
+            'vegetable' => ['sayur','bayam','kangkung','sawi','wortel','timun','terong','buncis','kol','daun','labu','selada'],
+            'drink' => ['jus','teh','kopi','susu','wedang','es ','minuman','air ', 'sirup'],
+            'snack' => ['kue','keripik','biskuit','permen','gorengan','martabak','pastel','risoles','roti','camilan','jajanan','pukis'],
+        ];
+
+        foreach ($categories as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($text, $keyword)) {
+                    return $category;
+                }
+            }
         }
 
-        $handle  = fopen($path, 'r');
-        $headers = fgetcsv($handle, 0, ';');
-        $headers = array_map(fn($h) => strtolower(trim($h)), $headers);
+        return 'main_meal';
+    }
 
-        $count = 0;
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            if (count($row) < count($headers)) continue;
-            $data   = array_combine($headers, array_map('trim', $row));
-            $name   = $data['name'] ?? '';
-            $origin = $data['origin'] ?? null;
+    private function detectIsNational(string $name, string $composition, ?string $origin = null): bool
+    {
+        $text = strtolower(trim($name . ' ' . $composition));
 
-            if (empty($name) || empty($origin)) continue;
+        $nationalKeywords = [
+            'apel', 'pisang', 'alpukat', 'roti', 'telur', 'tempe', 'tahu',
+            'bubur', 'bakso', 'soto', 'mie', 'bihun', 'sup', 'sayur', 'ayam goreng',
+            'teh', 'kopi', 'jus', 'susu', 'nasi', 'goreng', 'kentang', 'jagung',
+        ];
 
-            // Update origin ke makanan yang namanya cocok
-            Food::where('name', 'like', "%{$name}%")
-                ->whereNull('origin')
-                ->update(['origin' => $origin]);
-            $count++;
+        $regionalKeywords = [
+            'rawon', 'gudeg', 'rujak cingur', 'bakpia', 'brem', 'brongkos', 'buntil',
+            'pempek', 'pindang', 'coto', 'sego', 'lontong balap', 'pecel', 'serabi',
+            'sate klathak', 'soto lamongan', 'soto kudus', 'ayam goreng kalasan',
+        ];
+
+        foreach ($regionalKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                return false;
+            }
         }
-        fclose($handle);
-        $this->command->info("✅ Update origin: {$count} makanan diperbarui");
+
+        foreach ($nationalKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                return true;
+            }
+        }
+
+        return $origin === null;
     }
 
     private function detectMealType(array $data): string
@@ -114,5 +140,26 @@ class FoodSeeder extends Seeder
 
         // Default lunch
         return 'lunch';
+    }
+
+    private function normalizeNumber(mixed $value): float
+    {
+        return (float) str_replace(',', '.', trim((string) $value));
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'y'], true);
+    }
+
+    private function normalizeRegion(mixed $region, ?string $origin = null, mixed $isNational = false): ?string
+    {
+        $region = trim((string) $region);
+
+        if ($this->normalizeBoolean($isNational) || $region === 'Nasional') {
+            return 'Nasional';
+        }
+
+        return $region !== '' ? $region : $origin;
     }
 }

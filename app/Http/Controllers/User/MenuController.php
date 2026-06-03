@@ -47,6 +47,83 @@ public function index(Request $request) {
         return back()->with('success', 'Menu berhasil diperbarui!');
     }
 
+    public function detail(Food $food, Request $request)
+    {
+        // render partial modal HTML
+        $html = view('user.partials.food_modal', ['food' => $food])->render();
+        return response()->json(['success' => true, 'html' => $html]);
+    }
+
+    /**
+     * Pilih menu sebagai rencana untuk meal_type tertentu (sarapan/siang/malam)
+     * Akan menyimpan pada MenuRecommendation hari ini (create jika belum ada)
+     */
+    public function selectMenu(Request $request)
+    {
+        $request->validate([
+            'food_id' => 'required|exists:foods,id',
+            'meal_type' => 'required|in:breakfast,lunch,dinner',
+        ]);
+
+        $user = Auth::user();
+        $today = Carbon::today();
+
+        $menu = MenuRecommendation::firstOrCreate([
+            'user_id' => $user->id,
+            'recommendation_date' => $today,
+        ], [
+            'total_calories' => 0,
+        ]);
+
+        $field = $request->meal_type . '_id';
+        $menu->{$field} = $request->food_id;
+        $menu->is_saved = true;
+        $menu->save();
+
+        return response()->json(['success' => true, 'message' => 'Menu berhasil ditambahkan ke rencana makan.']);
+    }
+
+    /**
+     * Konfirmasi log menu dari rencana (mengubah rencana menjadi catatan konsumsi)
+     */
+    public function confirmPlannedMenu(Request $request)
+    {
+        $request->validate([
+            'meal_type' => 'required|in:breakfast,lunch,dinner',
+        ]);
+
+        $user = Auth::user();
+        $today = Carbon::today();
+
+        $menu = MenuRecommendation::where('user_id', $user->id)->where('recommendation_date', $today)->first();
+        if (!$menu) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada menu terpilih untuk hari ini.'], 422);
+        }
+
+        $field = $request->meal_type . '_id';
+        $foodId = $menu->{$field};
+        if (!$foodId) {
+            return response()->json(['success' => false, 'message' => 'Belum ada menu terpilih untuk waktu makan ini.'], 422);
+        }
+
+        $food = Food::find($foodId);
+        if (!$food) {
+            return response()->json(['success' => false, 'message' => 'Data makanan tidak ditemukan.'], 404);
+        }
+
+        // create food history
+        FoodHistory::create([
+            'user_id' => $user->id,
+            'food_id' => $food->id,
+            'meal_type' => $request->meal_type,
+            'calories_consumed' => $food->calories,
+            'consumed_date' => $today,
+            'consumed_time' => now()->format('H:i:s'),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Menu berhasil dicatat.']);
+    }
+
     public function logFood(Request $request) {
         $request->validate([
             'food_id'   => 'required|exists:foods,id',

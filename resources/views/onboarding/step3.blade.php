@@ -2,49 +2,55 @@
 @php $currentStep = 3; @endphp
 
 @section('content')
-<div class="bg-white rounded-3xl shadow-xl p-8" x-data="{ hasAllergy: '{{ old('has_allergy', 'no') }}' }">
-    <div class="mb-8">
-        <span class="text-5xl">🚨</span>
-        <h2 class="text-2xl font-bold text-gray-800 mt-3">Alergi Makanan</h2>
-        <p class="text-gray-500 mt-1 text-sm">Ini penting supaya rekomendasimu aman!</p>
+<div class="bg-white rounded-3xl shadow-xl p-8" data-onboarding-switcher>
+    <div class="text-center mb-8">
+        <h2 class="text-3xl font-extrabold text-gray-900 mt-3">Alergi Makanan</h2>
+        <p class="text-base text-gray-600 mt-2">Pilih bahan yang menjadi alergimu agar rekomendasi aman.</p>
     </div>
 
     <form method="POST" action="{{ route('onboarding.save.3') }}">
         @csrf
 
-        <div class="mb-6">
-            <p class="text-sm font-semibold text-gray-700 mb-3">Apakah kamu memiliki alergi makanan?</p>
-            <div class="grid grid-cols-2 gap-3">
-                <label class="flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer"
-                       :class="hasAllergy==='yes' ? 'border-ng-orange bg-orange-50' : 'border-gray-200'">
-                    <input type="radio" name="has_allergy" value="yes" x-model="hasAllergy" class="hidden">
-                    <span class="text-2xl">⚠️</span>
-                    <span class="font-semibold text-gray-700">Ya, ada</span>
-                </label>
-                <label class="flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer"
-                       :class="hasAllergy==='no' ? 'border-ng-green bg-green-50' : 'border-gray-200'">
-                    <input type="radio" name="has_allergy" value="no" x-model="hasAllergy" class="hidden">
-                    <span class="text-2xl">✅</span>
-                    <span class="font-semibold text-gray-700">Tidak ada</span>
-                </label>
+        <input type="hidden" name="has_allergy" value="{{ old('has_allergy', 'no') }}" data-choice-value>
+
+        <div class="space-y-5">
+            <div>
+                <label class="text-sm font-semibold text-gray-700 block mb-2">Apakah kamu memiliki alergi makanan?</label>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button type="button" class="card-selector w-full text-left allergy-switcher" data-choice-button="yes">
+                        <div class="font-semibold">Ya</div>
+                        <div class="text-sm text-gray-600 mt-1">Saya punya alergi makanan</div>
+                    </button>
+                    <button type="button" class="card-selector w-full text-left allergy-switcher" data-choice-button="no">
+                        <div class="font-semibold">Tidak</div>
+                        <div class="text-sm text-gray-600 mt-1">Saya tidak memiliki alergi makanan</div>
+                    </button>
+                </div>
             </div>
+
+            <div data-choice-detail></div>
+            <template data-choice-template>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm font-semibold text-gray-700 block mb-2">Pilih alergenmu</label>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            @foreach($compositionOptions as $comp)
+                                <label class="flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition border-gray-200 hover:border-ng-orange">
+                                    <input type="checkbox" name="allergens[]" value="{{ $comp }}" {{ in_array($comp, old('allergens', [])) ? 'checked' : '' }} class="form-checkbox">
+                                    <span class="font-semibold text-gray-700">{{ $comp }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-gray-700 block mb-2">Alergi lainnya (opsional)</label>
+                        <input type="text" name="custom_allergy" class="input-field" placeholder="Cth: durian, pete..." value="{{ old('custom_allergy') }}">
+                    </div>
+                </div>
+            </template>
         </div>
 
-        <div x-show="hasAllergy==='yes'" x-transition>
-            <p class="text-sm font-semibold text-gray-700 mb-3">Pilih alergenmu:</p>
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                @foreach(['Seafood','Udang','Kepiting','Cumi','Kacang','Susu','Telur','Gluten','Kedelai','Gandum'] as $allergen)
-                    <label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:border-ng-orange hover:bg-orange-50 transition">
-                        <input type="checkbox" name="allergens[]" value="{{ strtolower($allergen) }}" class="rounded text-ng-orange">
-                        <span class="text-sm text-gray-700">{{ $allergen }}</span>
-                    </label>
-                @endforeach
-            </div>
-            <div>
-                <label class="text-sm font-medium text-gray-700 block mb-2">Alergi lainnya (opsional):</label>
-                <input type="text" name="custom_allergy" class="input-field" placeholder="Cth: durian, pete...">
-            </div>
-        </div>
+        @include('onboarding._errors')
 
         <div class="mt-8 flex justify-between">
             <a href="{{ route('onboarding.step', ['step' => 2]) }}" class="btn-outline">← Kembali</a>
@@ -52,4 +58,76 @@
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        function clearDetailFields(detail) {
+            detail.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                input.checked = false;
+            });
+
+            detail.querySelectorAll('input[type="text"], input[type="number"]').forEach((input) => {
+                input.value = '';
+            });
+
+            detail.querySelectorAll('select').forEach((select) => {
+                select.selectedIndex = 0;
+            });
+        }
+
+        function applyChoice(section, value) {
+            const hiddenInput = section.querySelector('[data-choice-value]');
+            const buttons = section.querySelectorAll('[data-choice-button]');
+            const detail = section.querySelector('[data-choice-detail]');
+            const template = section.querySelector('[data-choice-template]');
+
+            if (hiddenInput) {
+                hiddenInput.value = value;
+            }
+
+            buttons.forEach((button) => {
+                const active = button.dataset.choiceButton === value;
+                button.classList.toggle('card-selector-active', active);
+                button.classList.toggle('card-selector-inactive', !active);
+                button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+
+            if (!detail || !template) {
+                return;
+            }
+
+            const showDetail = value === 'yes';
+
+            if (showDetail) {
+                if (!detail.childElementCount) {
+                    detail.appendChild(template.content.cloneNode(true));
+                }
+            } else {
+                clearDetailFields(detail);
+                detail.innerHTML = '';
+            }
+        }
+
+        function initSection(section) {
+            const hiddenInput = section.querySelector('[data-choice-value]');
+            const initialValue = hiddenInput && hiddenInput.value === 'yes' ? 'yes' : 'no';
+
+            applyChoice(section, initialValue);
+
+            section.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-choice-button]');
+
+                if (!button || !section.contains(button)) {
+                    return;
+                }
+
+                applyChoice(section, button.dataset.choiceButton || 'no');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-onboarding-switcher]').forEach(initSection);
+        });
+    })();
+</script>
 @endsection

@@ -11,15 +11,32 @@ class Food extends Model {
 
     protected $fillable = [
         'name','calories','proteins','fat','carbohydrate',
-        'composition','origin','region','meal_type','image_url','is_active'
+        'composition','origin','food_category','is_national','region','meal_type','image_url','is_active'
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = ['is_active' => 'boolean', 'is_national' => 'boolean'];
 
     // Filter berdasarkan wilayah
     public function scopeByRegion($query, string $region) {
-        return $query->where('origin', 'like', "%{$region}%")
-                    ->orWhere('region', $region);
+        return $query->where(function ($q) use ($region) {
+            $q->where('origin', 'like', "%{$region}%")
+              ->orWhere('region', $region)
+              ->orWhere('is_national', true);
+        });
+    }
+
+    public function scopeEligibleForProvince($query, ?string $province) {
+        if (!$province) {
+            return $query->where(function ($q) {
+                $q->where('is_national', true)->orWhere('region', 'Nasional');
+            });
+        }
+
+        return $query->where(function ($q) use ($province) {
+            $q->where('origin', $province)
+              ->orWhere('region', 'Nasional')
+              ->orWhere('is_national', true);
+        });
     }
 
     // Filter exclude alergen

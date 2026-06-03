@@ -14,6 +14,10 @@
 
 @layer components {
 
+    /* Alpine x-cloak utility to prevent flash of content before Alpine initializes */
+    [x-cloak] { display: none !important; }
+
+
     .btn-primary {
         @apply bg-orange-500 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-orange-700 transition-all duration-200 shadow-md;
     }
@@ -32,6 +36,43 @@
 
     .input-field {
         @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-ng-orange focus:border-transparent transition-all duration-200;
+    }
+
+    /* Onboarding card selector styles */
+    .card-selector {
+        @apply p-4 border-2 rounded-xl cursor-pointer transition-all duration-200;
+    }
+
+    .card-selector-active {
+        @apply border-green-800 bg-green-50 text-green-800;
+    }
+
+    .card-selector-inactive {
+        @apply border-gray-200 bg-white text-gray-700 hover:border-green-600;
+    }
+
+    .choice-section .choice-detail {
+        display: none;
+    }
+
+    .choice-section:has(input[name="has_allergy"][value="yes"]:checked) .choice-detail.allergy-detail,
+    .choice-section:has(input[name="has_medical_need"][value="yes"]:checked) .choice-detail.medical-detail {
+        display: block;
+    }
+
+    .choice-section:has(input[name="has_allergy"][value="yes"]:checked) .card-selector.allergy-yes,
+    .choice-section:has(input[name="has_medical_need"][value="yes"]:checked) .card-selector.medical-yes {
+        @apply border-green-800 bg-green-50 text-green-800;
+    }
+
+    .choice-section:has(input[name="has_allergy"][value="no"]:checked) .card-selector.allergy-no,
+    .choice-section:has(input[name="has_medical_need"][value="no"]:checked) .card-selector.medical-no {
+        @apply border-green-800 bg-green-50 text-green-800;
+    }
+
+    /* Radio and checkbox consistent sizes */
+    .form-radio, .form-checkbox {
+        @apply h-4 w-4 text-green-700 border-gray-300 focus:ring-green-500;
     }
 
     .badge-green {
