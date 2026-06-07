@@ -7,6 +7,7 @@ use App\Http\Controllers\User\MenuController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\HistoryController;
 use App\Http\Controllers\User\NotificationController;
+use App\Models\Article;
 use App\Http\Controllers\Api;
 use App\Http\Controllers\Admin;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,10 @@ Route::get('/', function () {
 
     return view('landing');
 })->name('home');
+
+Route::get('/artikel/{article:slug}', function (Article $article) {
+    return view('articles.show', compact('article'));
+})->name('article.show');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('user.dashboard');
 Route::post('/dashboard/health', [DashboardController::class, 'storeHealth'])->middleware('auth')->name('user.health.store');

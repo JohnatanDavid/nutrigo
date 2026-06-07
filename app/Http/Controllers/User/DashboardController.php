@@ -127,6 +127,7 @@ class DashboardController extends Controller {
             ));
         }
 
+        /** @var User $user */
         $today         = Carbon::today();
         $recommendation = $this->menuService->generateDailyMenu($user);
 
@@ -244,6 +245,7 @@ class DashboardController extends Controller {
             'allergens' => 'nullable|array',
         ]);
 
+        /** @var User $user */
         $user = Auth::user();
 
         $filters = [
@@ -288,6 +290,7 @@ class DashboardController extends Controller {
 
         $allergens = array_values(array_unique(array_filter($allergens)));
 
+        /** @var User $user */
         $user->update([
             'nickname' => $request->nickname,
             'province' => $request->province,
