@@ -16,4 +16,9 @@ class Article extends Model {
     }
 
     public function author() { return $this->belongsTo(User::class, 'author_id'); }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
 }

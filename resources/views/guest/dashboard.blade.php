@@ -27,11 +27,10 @@
     $provinceOptions = config('nutrigo.provinces');
 @endphp
 
-<body class="min-h-screen bg-gradient-to-b from-[#FFF8EE] via-[#F3E8CC] to-[#FFF8EE] text-[#17311f]"
-    x-data="{
-        authOpen: {{ $errors->any() ? 'true' : 'false' }},
-        authTab: {{ !$errors->any() || old('name') ? '\'register\'' : '\'login\'' }}
-    }">
+<body class="min-h-screen bg-[#f7edd2] text-[#17311f]" x-data="{
+    authOpen: {{ $errors->any() ? 'true' : 'false' }},
+    authTab: {{ !$errors->any() || old('name') ? '\'register\'' : '\'login\'' }}
+}">
     <header class="sticky top-0 z-30 border-b border-black/5 bg-[#f7edd2]/80 backdrop-blur-sm shadow-sm">
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
             <a href="{{ url('/') }}" class="flex items-center gap-3">
@@ -161,7 +160,7 @@
                 $selectedActivity = collect($activityOptions)->firstWhere('value', $guestSummary['activity_level']);
             @endphp
             <section id="guest-results" class="grid gap-4 md:grid-cols-4">
-                <div class="rounded-[22px] bg-[#F96015] p-5 text-white shadow-sm ring-1 ring-black/5">
+                <div class="rounded-[22px] bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
                     <div
                         class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                         <span>BMI Kamu</span><span>i</span>
@@ -169,7 +168,7 @@
                     <p class="mt-6 text-4xl font-black">{{ number_format($guestSummary['bmi'], 1) }}</p>
                     <p class="mt-2 text-sm font-semibold text-white/80">{{ $guestSummary['bmi_category'] }}</p>
                 </div>
-                <div class="rounded-[22px] bg-[#FFC926] p-5 text-[#18542A]">
+                <div class="rounded-[22px] bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
                     <div
                         class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                         <span>Kebutuhan Kalori</span><span>◌</span>
@@ -177,7 +176,7 @@
                     <p class="mt-6 text-4xl font-black">{{ number_format($guestSummary['daily_calories']) }}</p>
                     <p class="mt-2 text-sm font-semibold text-white/80">kcal / hari</p>
                 </div>
-                <div class="rounded-[22px] bg-[#9ABC05] p-5 text-white shadow-sm ring-1 ring-black/5">
+                <div class="rounded-[22px] bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
                     <div
                         class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                         <span>Aktivitas</span><span>⌄</span>
@@ -185,7 +184,7 @@
                     <p class="mt-6 text-2xl font-black">{{ $selectedActivity['label'] ?? '—' }}</p>
                     <p class="mt-2 text-sm font-semibold text-white/80">{{ $guestSummary['province'] }}</p>
                 </div>
-                <div class="rounded-[22px] bg-[#18542A] p-5 text-white shadow-sm ring-1 ring-black/5">
+                <div class="rounded-[22px] bg-[#ff8c45] p-5 text-white shadow-sm ring-1 ring-black/5">
                     <div
                         class="flex items-center justify-between text-xs font-bold uppercase tracking-[0.2em] text-white/75">
                         <span>Alokasi</span><span>⌃</span>
@@ -220,7 +219,7 @@
                             <article @click="authOpen = true; authTab = 'register'"
                                 class="group relative cursor-pointer overflow-hidden rounded-[24px] bg-[#fff4cb] shadow-[0_12px_26px_rgba(56,39,10,0.1)] ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-[0_18px_30px_rgba(56,39,10,0.14)]">
                                 <div class="relative h-52 overflow-hidden">
-                                    <img src="{{ $food->image ? asset($food->image) : asset('assets/salad-sketsa 1.png') }}"
+                                    <img src="{{ $food->image_url ? asset('storage/' . $food->image_url) : asset('assets/salad-sketsa 1.png') }}"
                                         alt="{{ $food->name }}"
                                         class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
                                     <div
@@ -270,167 +269,41 @@
             </section>
         @else
             <section id="program"
-                class="overflow-hidden rounded-[32px] bg-gradient-to-br from-[#FFF8EE] via-[#F3E8CC] to-[#FFF4D6] p-8 shadow-[0_20px_50px_rgba(24,84,42,0.08)] ring-1 ring-[#F3E8CC]">
-
-                <div class="flex flex-col items-center text-center">
-
-                    <div class="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#FFC926]/20 text-5xl">
-                        🍽️
-                    </div>
-
-                    <span
-                        class="rounded-full bg-[#FFC926] px-4 py-1 text-xs font-extrabold uppercase tracking-[0.2em] text-[#18542A]">
-                        NutriGo Recommendation
-                    </span>
-
-                    <h2 class="mt-5 text-3xl font-black text-[#18542A] lg:text-4xl">
-                        Rekomendasi Makanan Belum Tersedia
-                    </h2>
-
-                    <p class="mt-4 max-w-2xl text-base leading-7 text-[#6E6658]">
-                        Lengkapi data kesehatanmu terlebih dahulu untuk mendapatkan rekomendasi
-                        makanan yang sesuai dengan kebutuhan kalori dan wilayah tempat tinggalmu.
-                    </p>
-
-                    <div class="mt-8 grid gap-4 sm:grid-cols-3">
-
-                        <div class="rounded-2xl bg-white p-5 shadow-sm">
-                            <div class="text-3xl">📏</div>
-                            <h3 class="mt-3 font-bold text-[#18542A]">
-                                Isi Data Tubuh
-                            </h3>
-                            <p class="mt-2 text-sm text-[#75684F]">
-                                Masukkan usia, tinggi, dan berat badan.
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl bg-white p-5 shadow-sm">
-                            <div class="text-3xl">🏃</div>
-                            <h3 class="mt-3 font-bold text-[#18542A]">
-                                Pilih Aktivitas
-                            </h3>
-                            <p class="mt-2 text-sm text-[#75684F]">
-                                Sesuaikan dengan aktivitas harianmu.
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl bg-white p-5 shadow-sm">
-                            <div class="text-3xl">🥗</div>
-                            <h3 class="mt-3 font-bold text-[#18542A]">
-                                Dapatkan Menu
-                            </h3>
-                            <p class="mt-2 text-sm text-[#75684F]">
-                                NutriGo akan menghitung dan memberi rekomendasi.
-                            </p>
-                        </div>
-
-                    </div>
-
-                    <a href="#data-kesehatan"
-                        class="mt-8 inline-flex items-center gap-2 rounded-full bg-[#F96015] px-6 py-3 text-sm font-extrabold text-white shadow-lg transition hover:scale-105 hover:bg-[#D52518]">
-                        Hitung BMI Sekarang
-                        <span>→</span>
-                    </a>
-
-                </div>
+                class="rounded-[28px] bg-[#fff6ea] p-5 shadow-[0_14px_40px_rgba(48,31,10,0.09)] ring-1 ring-black/5 lg:p-6">
+                <h2 class="text-3xl font-black text-[#17311f]">Rekomendasi Makanan</h2>
+                <p class="mt-2 text-sm text-[#726956]">Setelah kamu klik Hitung BMI, rekomendasi makanan berdasarkan
+                    wilayah akan muncul di sini.</p>
             </section>
         @endif
 
-        <section id="artikel"
-            class="flex flex-col gap-4 rounded-[28px] bg-gradient-to-r from-[#18542A] to-[#236937] p-6 text-white shadow-[0_15px_40px_rgba(24,84,42,0.15)] md:flex-row md:items-center md:justify-between">
-
+        <section id="artikel" class="flex items-end justify-between gap-4">
             <div>
-                <span
-                    class="inline-flex items-center gap-2 rounded-full bg-[#FFC926] px-4 py-1 text-xs font-extrabold uppercase tracking-[0.2em] text-[#18542A]">
-                    📚 Artikel Terbaru
-                </span>
-
-                <h2 class="mt-4 text-3xl font-black lg:text-4xl">
-                    Artikel Kesehatan
-                </h2>
-
-                <p class="mt-2 max-w-xl text-sm leading-6 text-white/80">
-                    Temukan informasi nutrisi, pola makan sehat, serta tips menjaga kesehatan
-                    untuk mendukung gaya hidup yang lebih baik setiap hari.
-                </p>
+                <h2 class="text-3xl font-black text-[#17311f]">Artikel Kesehatan</h2>
+                <p class="mt-2 text-sm text-[#726956]">Update informasi nutrisi dan tips gaya hidup sehat.</p>
             </div>
-
-            <a href="#"
-                class="inline-flex items-center justify-center gap-2 rounded-full bg-[#F96015] px-5 py-3 text-sm font-extrabold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#D52518]">
-                Lihat Semua Artikel
-                <span>→</span>
-            </a>
-
+            <a href="#" class="text-sm font-bold text-[#245432] transition hover:text-[#f55c1f]">Lihat Semua
+                →</a>
         </section>
 
-        <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-
+        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @forelse($articles as $article)
                 <article
-                    class="group overflow-hidden rounded-[28px] bg-white shadow-[0_15px_35px_rgba(24,84,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,84,42,0.15)]">
-
-                    <div class="relative overflow-hidden">
-
-                        <img src="{{ $article->image ? Storage::url($article->image) : asset('assets/default-article.jpg') }}"
-                            alt="{{ $article->title }}"
-                            class="h-56 w-full object-cover transition duration-500 group-hover:scale-105">
-
-                        <div class="absolute left-3 top-3">
-                            <span
-                                class="rounded-full bg-[#FFC926] px-3 py-1 text-[10px] font-extrabold uppercase text-[#18542A]">
-                                {{ ucfirst($article->category) }}
-                            </span>
-                        </div>
-
+                    class="overflow-hidden rounded-[22px] bg-white shadow-[0_10px_24px_rgba(46,30,12,0.08)] ring-1 ring-black/5">
+                    <img src="{{ $article->image ? asset('storage/' . $article->image) : asset('assets/salad-sketsa 1.png') }}"
+                        alt="{{ $article->title }}" class="h-52 w-full object-cover">
+                    <div class="p-5">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-[#f55c1f]">
+                            {{ $article->category }}</p>
+                        <h3 class="mt-3 text-xl font-bold leading-tight text-[#17311f]">{{ $article->title }}</h3>
+                        <p class="mt-3 text-sm leading-6 text-[#6e6658] line-clamp-3">{{ $article->excerpt }}</p>
+                        <a href="{{ route('article.show', $article) }}"
+                            class="mt-4 inline-flex text-sm font-semibold text-[#245432]">Baca
+                            Selengkapnya</a>
                     </div>
-
-                    <div class="p-6">
-
-                        <h3 class="line-clamp-2 text-xl font-black text-[#18542A]">
-                            {{ $article->title }}
-                        </h3>
-
-                        <p class="mt-3 line-clamp-3 text-sm leading-6 text-[#75684F]">
-                            {{ $article->excerpt }}
-                        </p>
-
-                        <div class="mt-5 flex items-center justify-between">
-
-                            <div class="flex items-center gap-2 text-xs text-gray-500">
-                                <span>📖 {{ $article->read_time }} menit</span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-
-                                <span class="rounded-full bg-[#F3E8CC] px-3 py-1 text-xs font-bold text-[#18542A]">
-                                    {{ $article->author?->name ?? 'Admin' }}
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
                 </article>
-
             @empty
-
-                <div class="col-span-full rounded-[28px] bg-white p-10 text-center shadow-sm">
-
-                    <div class="text-6xl">📚</div>
-
-                    <h3 class="mt-4 text-xl font-black text-[#18542A]">
-                        Belum Ada Artikel
-                    </h3>
-
-                    <p class="mt-2 text-[#75684F]">
-                        Artikel yang dipublikasikan admin akan muncul di sini.
-                    </p>
-
-                </div>
+                <p class="text-sm text-[#726956]">Belum ada artikel.</p>
             @endforelse
-
         </section>
     </main>
 

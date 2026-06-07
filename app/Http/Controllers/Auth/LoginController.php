@@ -29,7 +29,7 @@ class LoginController extends Controller
 
             $user = Auth::user();
 
-            if ($user && ($user->is_admin ?? false)) {
+            if ($user?->is_admin) {
                 return redirect()->route('admin.dashboard');
             }
 
@@ -52,6 +52,6 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('home');
     }
 }

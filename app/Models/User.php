@@ -1,12 +1,12 @@
 <?php
 namespace App\Models;
 
-
 use App\Models\MealReminder;
 use App\Models\Notification;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable {
     
@@ -40,18 +40,18 @@ class User extends Authenticatable {
     }
 
     // ─── Relations ─────────────────────────────────────────────
-    public function allergies()      { return $this->hasMany(UserAllergy::class); }
-    public function medicalNeeds()   { return $this->hasMany(UserMedicalNeed::class); }
-    public function foodHistories()  { return $this->hasMany(FoodHistory::class); }
-    public function recommendations(){ return $this->hasMany(MenuRecommendation::class); }
-    public function articles()       { return $this->hasMany(Article::class, 'author_id'); }
+    public function allergies(): HasMany      { return $this->hasMany(UserAllergy::class); }
+    public function medicalNeeds(): HasMany   { return $this->hasMany(UserMedicalNeed::class); }
+    public function foodHistories(): HasMany  { return $this->hasMany(FoodHistory::class); }
+    public function recommendations(): HasMany{ return $this->hasMany(MenuRecommendation::class); }
+    public function articles(): HasMany       { return $this->hasMany(Article::class, 'author_id'); }
 
-    public function reminders()
+    public function reminders(): HasMany
     {
         return $this->hasMany(MealReminder::class);
     }
 
-    public function notifications()
+    public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
     }
